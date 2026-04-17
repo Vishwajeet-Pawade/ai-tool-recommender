@@ -1,0 +1,466 @@
+export interface AITool {
+  id: string;
+  name: string;
+  logo: string;
+  description: string;
+  detailedDescription: string;
+  rating: number;
+  reviews: number;
+  humanEval: number;
+  mbpp: number;
+  tags: string[];
+  purposes: string[];
+  skillLevel: string[];
+  pricing: string;
+  platforms: string[];
+  languages: string[];
+  privacy: string;
+  accuracy: string;
+  speed: number;
+  popularity: number;
+  ideIntegration: string[];
+  website: string;
+  pros: string[];
+  cons: string[];
+}
+
+export const aiTools: AITool[] = [
+  {
+    id: "github-copilot",
+    name: "GitHub Copilot",
+    logo: "🤖",
+    description: "AI pair programmer that helps you write code faster with intelligent suggestions.",
+    detailedDescription: "GitHub Copilot is an AI-powered code completion tool that suggests whole lines or blocks of code as you type. Powered by OpenAI Codex, it's trained on billions of lines of public code.",
+    rating: 4.8,
+    reviews: 15420,
+    humanEval: 47.3,
+    mbpp: 58.2,
+    tags: ["Best for Coding", "Paid", "Fast"],
+    purposes: ["Coding"],
+    skillLevel: ["Beginner", "Intermediate", "Advanced"],
+    pricing: "Paid",
+    platforms: ["Web", "VS Code", "API"],
+    languages: ["Python", "JavaScript", "Java", "C++"],
+    privacy: "Cloud AI",
+    accuracy: "High accuracy",
+    speed: 95,
+    popularity: 98,
+    ideIntegration: ["VS Code", "Visual Studio", "JetBrains"],
+    website: "https://github.com/features/copilot",
+    pros: [
+      "Excellent code completion accuracy",
+      "Fast response time",
+      "Great IDE integration",
+      "Supports many programming languages"
+    ],
+    cons: [
+      "Subscription required",
+      "Requires internet connection",
+      "May suggest copyrighted code patterns"
+    ]
+  },
+  {
+    id: "chatgpt",
+    name: "ChatGPT",
+    logo: "💬",
+    description: "Conversational AI that excels at writing, coding, research, and general assistance.",
+    detailedDescription: "ChatGPT is a versatile AI assistant built by OpenAI that can help with writing, coding, research, data analysis, and more. It uses advanced language models to understand context and provide helpful responses.",
+    rating: 4.7,
+    reviews: 45890,
+    humanEval: 72.5,
+    mbpp: 68.1,
+    tags: ["Popular", "Versatile", "Freemium"],
+    purposes: ["Coding", "Writing", "Research", "Data Analysis", "Chatbots"],
+    skillLevel: ["Beginner", "Intermediate", "Advanced", "Enterprise"],
+    pricing: "Freemium",
+    platforms: ["Web", "Mobile", "API"],
+    languages: ["Python", "JavaScript", "Java", "C++", "Kotlin"],
+    privacy: "Cloud AI",
+    accuracy: "High accuracy",
+    speed: 85,
+    popularity: 100,
+    ideIntegration: ["API Integration"],
+    website: "https://chat.openai.com",
+    pros: [
+      "Extremely versatile",
+      "High-quality responses",
+      "Large context window",
+      "Regular updates and improvements"
+    ],
+    cons: [
+      "Can be slow during peak times",
+      "Premium features require subscription",
+      "Internet dependent"
+    ]
+  },
+  {
+    id: "midjourney",
+    name: "Midjourney",
+    logo: "🎨",
+    description: "Advanced AI image generator creating stunning, artistic visuals from text prompts.",
+    detailedDescription: "Midjourney is an AI-powered image generation tool that creates high-quality, artistic images from text descriptions. It's known for its aesthetic quality and creative outputs.",
+    rating: 4.6,
+    reviews: 23450,
+    humanEval: 0,
+    mbpp: 0,
+    tags: ["Best for Design", "Paid", "High Quality"],
+    purposes: ["Image Generation"],
+    skillLevel: ["Beginner", "Intermediate", "Advanced"],
+    pricing: "Paid",
+    platforms: ["Web"],
+    languages: [],
+    privacy: "Cloud AI",
+    accuracy: "High accuracy",
+    speed: 70,
+    popularity: 92,
+    ideIntegration: [],
+    website: "https://midjourney.com",
+    pros: [
+      "Exceptional image quality",
+      "Artistic and creative results",
+      "Active community",
+      "Regular model updates"
+    ],
+    cons: [
+      "No free tier",
+      "Discord-based interface",
+      "Can be expensive for heavy use"
+    ]
+  },
+  {
+    id: "claude",
+    name: "Claude",
+    logo: "🧠",
+    description: "Anthropic's AI assistant focused on safety, accuracy, and helpful responses.",
+    detailedDescription: "Claude is an AI assistant created by Anthropic with a focus on being helpful, harmless, and honest. It excels at complex reasoning, coding, and detailed analysis.",
+    rating: 4.8,
+    reviews: 12340,
+    humanEval: 75.0,
+    mbpp: 70.5,
+    tags: ["High Accuracy", "Safe", "Freemium"],
+    purposes: ["Coding", "Writing", "Research", "Data Analysis"],
+    skillLevel: ["Intermediate", "Advanced", "Enterprise"],
+    pricing: "Freemium",
+    platforms: ["Web", "API"],
+    languages: ["Python", "JavaScript", "Java", "C++", "Kotlin"],
+    privacy: "Cloud AI",
+    accuracy: "High accuracy",
+    speed: 88,
+    popularity: 85,
+    ideIntegration: ["API Integration"],
+    website: "https://claude.ai",
+    pros: [
+      "Very large context window (200K tokens)",
+      "Strong reasoning capabilities",
+      "Safety-focused design",
+      "Excellent at following instructions"
+    ],
+    cons: [
+      "Usage limits on free tier",
+      "Less widely integrated than competitors",
+      "Can be conservative in responses"
+    ]
+  },
+  {
+    id: "stable-diffusion",
+    name: "Stable Diffusion",
+    logo: "🖼️",
+    description: "Open-source AI image generator that can run locally for complete privacy.",
+    detailedDescription: "Stable Diffusion is an open-source text-to-image model that can generate detailed images from text descriptions. It can run on consumer hardware for complete privacy and control.",
+    rating: 4.5,
+    reviews: 18920,
+    humanEval: 0,
+    mbpp: 0,
+    tags: ["Open Source", "Free", "Privacy-Focused"],
+    purposes: ["Image Generation"],
+    skillLevel: ["Intermediate", "Advanced"],
+    pricing: "Free",
+    platforms: ["Web", "Local Model"],
+    languages: ["Python"],
+    privacy: "Local AI",
+    accuracy: "Balanced",
+    speed: 60,
+    popularity: 88,
+    ideIntegration: [],
+    website: "https://stability.ai",
+    pros: [
+      "Completely free and open source",
+      "Can run locally",
+      "No censorship",
+      "Highly customizable"
+    ],
+    cons: [
+      "Requires technical knowledge",
+      "Needs powerful hardware for local use",
+      "Quality varies with model versions"
+    ]
+  },
+  {
+    id: "tabnine",
+    name: "Tabnine",
+    logo: "⚡",
+    description: "AI code completion tool with privacy-focused local and cloud options.",
+    detailedDescription: "Tabnine is an AI coding assistant that provides intelligent code completions. It offers both cloud-based and local models, giving teams flexibility in how they handle code privacy.",
+    rating: 4.4,
+    reviews: 8750,
+    humanEval: 42.1,
+    mbpp: 51.3,
+    tags: ["Privacy-Focused", "Freemium", "Fast"],
+    purposes: ["Coding"],
+    skillLevel: ["Beginner", "Intermediate", "Advanced", "Enterprise"],
+    pricing: "Freemium",
+    platforms: ["VS Code", "Web"],
+    languages: ["Python", "JavaScript", "Java", "C++", "Kotlin"],
+    privacy: "Local AI",
+    accuracy: "Balanced",
+    speed: 92,
+    popularity: 75,
+    ideIntegration: ["VS Code", "IntelliJ", "PyCharm"],
+    website: "https://tabnine.com",
+    pros: [
+      "Can run completely offline",
+      "Privacy-focused",
+      "Good IDE integration",
+      "Team collaboration features"
+    ],
+    cons: [
+      "Local model less accurate than cloud",
+      "Free tier is limited",
+      "Slower than some competitors"
+    ]
+  },
+  {
+    id: "jasper",
+    name: "Jasper",
+    logo: "✍️",
+    description: "AI writing assistant optimized for marketing content and creative copy.",
+    detailedDescription: "Jasper is an AI writing tool specifically designed for marketers, content creators, and businesses. It excels at creating marketing copy, blog posts, and creative content.",
+    rating: 4.5,
+    reviews: 9870,
+    humanEval: 0,
+    mbpp: 0,
+    tags: ["Best for Writing", "Paid", "Marketing"],
+    purposes: ["Writing"],
+    skillLevel: ["Beginner", "Intermediate", "Advanced"],
+    pricing: "Paid",
+    platforms: ["Web", "API"],
+    languages: [],
+    privacy: "Cloud AI",
+    accuracy: "High accuracy",
+    speed: 90,
+    popularity: 78,
+    ideIntegration: [],
+    website: "https://jasper.ai",
+    pros: [
+      "Specialized for marketing content",
+      "Templates for various content types",
+      "Brand voice customization",
+      "Good integrations"
+    ],
+    cons: [
+      "Expensive for individuals",
+      "Focused mainly on marketing",
+      "No free tier"
+    ]
+  },
+  {
+    id: "runway",
+    name: "Runway",
+    logo: "🎬",
+    description: "AI-powered video generation and editing platform for creative professionals.",
+    detailedDescription: "Runway is an advanced AI tool for video generation, editing, and creative effects. It enables creators to generate videos from text, edit with AI assistance, and apply creative effects.",
+    rating: 4.7,
+    reviews: 6540,
+    humanEval: 0,
+    mbpp: 0,
+    tags: ["Video AI", "Creative", "Freemium"],
+    purposes: ["Video Generation"],
+    skillLevel: ["Intermediate", "Advanced"],
+    pricing: "Freemium",
+    platforms: ["Web"],
+    languages: [],
+    privacy: "Cloud AI",
+    accuracy: "High accuracy",
+    speed: 65,
+    popularity: 82,
+    ideIntegration: [],
+    website: "https://runwayml.com",
+    pros: [
+      "Cutting-edge video AI features",
+      "User-friendly interface",
+      "Multiple AI tools in one platform",
+      "Regular feature updates"
+    ],
+    cons: [
+      "Can be slow to generate",
+      "Credit-based pricing",
+      "Limited free tier"
+    ]
+  },
+  {
+    id: "perplexity",
+    name: "Perplexity AI",
+    logo: "🔍",
+    description: "AI-powered research assistant with real-time web search and citations.",
+    detailedDescription: "Perplexity AI combines the power of large language models with real-time web search to provide accurate, cited answers to research questions. It's ideal for fact-checking and deep research.",
+    rating: 4.6,
+    reviews: 7650,
+    humanEval: 0,
+    mbpp: 0,
+    tags: ["Research", "Fast", "Freemium"],
+    purposes: ["Research", "Data Analysis"],
+    skillLevel: ["Beginner", "Intermediate", "Advanced"],
+    pricing: "Freemium",
+    platforms: ["Web", "Mobile"],
+    languages: [],
+    privacy: "Cloud AI",
+    accuracy: "High accuracy",
+    speed: 87,
+    popularity: 80,
+    ideIntegration: [],
+    website: "https://perplexity.ai",
+    pros: [
+      "Real-time web search",
+      "Provides citations",
+      "Clean interface",
+      "Fast responses"
+    ],
+    cons: [
+      "Limited free searches per day",
+      "Sometimes provides too many sources",
+      "Pro features can be expensive"
+    ]
+  },
+  {
+    id: "codeium",
+    name: "Codeium",
+    logo: "💻",
+    description: "Free AI code completion tool with support for 70+ programming languages.",
+    detailedDescription: "Codeium is a free AI-powered coding assistant that offers code completion, search, and chat features. It's designed to be fast and works with over 70 programming languages.",
+    rating: 4.6,
+    reviews: 5430,
+    humanEval: 39.2,
+    mbpp: 48.7,
+    tags: ["Free", "Fast", "Multi-language"],
+    purposes: ["Coding"],
+    skillLevel: ["Beginner", "Intermediate", "Advanced"],
+    pricing: "Free",
+    platforms: ["VS Code", "Web"],
+    languages: ["Python", "JavaScript", "Java", "C++", "Kotlin"],
+    privacy: "Cloud AI",
+    accuracy: "Balanced",
+    speed: 94,
+    popularity: 72,
+    ideIntegration: ["VS Code", "JetBrains", "Vim"],
+    website: "https://codeium.com",
+    pros: [
+      "Completely free",
+      "Very fast",
+      "Supports 70+ languages",
+      "Good IDE integration"
+    ],
+    cons: [
+      "Less accurate than paid alternatives",
+      "Smaller community",
+      "Limited advanced features"
+    ]
+  },
+  {
+    id: "dall-e",
+    name: "DALL-E 3",
+    logo: "🎨",
+    description: "OpenAI's advanced image generator integrated with ChatGPT for easy creation.",
+    detailedDescription: "DALL-E 3 is OpenAI's latest image generation model, offering high-quality, detailed images from text prompts. It's integrated with ChatGPT for easy prompt refinement.",
+    rating: 4.7,
+    reviews: 14320,
+    humanEval: 0,
+    mbpp: 0,
+    tags: ["High Quality", "Integrated", "Freemium"],
+    purposes: ["Image Generation"],
+    skillLevel: ["Beginner", "Intermediate", "Advanced"],
+    pricing: "Freemium",
+    platforms: ["Web", "API"],
+    languages: [],
+    privacy: "Cloud AI",
+    accuracy: "High accuracy",
+    speed: 75,
+    popularity: 90,
+    ideIntegration: [],
+    website: "https://openai.com/dall-e-3",
+    pros: [
+      "Excellent prompt understanding",
+      "High image quality",
+      "ChatGPT integration",
+      "Safety features"
+    ],
+    cons: [
+      "Limited free generations",
+      "Can be slow",
+      "Content policy restrictions"
+    ]
+  },
+  {
+    id: "llama",
+    name: "LLaMA",
+    logo: "🦙",
+    description: "Meta's open-source large language model for research and local deployment.",
+    detailedDescription: "LLaMA is Meta's open-source large language model that can be run locally or on private servers. It's designed for researchers and developers who need full control over their AI.",
+    rating: 4.4,
+    reviews: 3210,
+    humanEval: 67.5,
+    mbpp: 62.3,
+    tags: ["Open Source", "Free", "Privacy"],
+    purposes: ["Coding", "Writing", "Research", "Chatbots"],
+    skillLevel: ["Advanced", "Enterprise"],
+    pricing: "Free",
+    platforms: ["Local Model", "API"],
+    languages: ["Python", "JavaScript", "Java", "C++"],
+    privacy: "Local AI",
+    accuracy: "High accuracy",
+    speed: 55,
+    popularity: 70,
+    ideIntegration: [],
+    website: "https://ai.meta.com/llama/",
+    pros: [
+      "Completely open source",
+      "Can run locally",
+      "No usage limits",
+      "Full customization"
+    ],
+    cons: [
+      "Requires technical expertise",
+      "Needs powerful hardware",
+      "Self-hosting complexity"
+    ]
+  }
+];
+
+export type FilterState = {
+  purposes: string[];
+  skillLevels: string[];
+  budget: string[];
+  accuracy: string[];
+  platforms: string[];
+  languages: string[];
+  privacy: string[];
+};
+
+export const defaultFilters: FilterState = {
+  purposes: [],
+  skillLevels: [],
+  budget: [],
+  accuracy: [],
+  platforms: [],
+  languages: [],
+  privacy: []
+};
+
+export const filterOptions = {
+  purposes: ["Coding", "Writing", "Image Generation", "Video Generation", "Research", "Data Analysis", "Chatbots"],
+  skillLevels: ["Beginner", "Intermediate", "Advanced", "Enterprise"],
+  budget: ["Free", "Freemium", "Paid"],
+  accuracy: ["High accuracy", "Balanced", "Fast response"],
+  platforms: ["Web", "Mobile", "VS Code", "API", "Local Model"],
+  languages: ["Python", "Java", "C++", "JavaScript", "Kotlin"],
+  privacy: ["Cloud AI", "Local AI", "Open Source"]
+};
