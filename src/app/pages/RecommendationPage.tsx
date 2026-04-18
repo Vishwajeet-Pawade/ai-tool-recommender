@@ -32,6 +32,38 @@ export function RecommendationPage() {
       .catch(err => console.error(err));
   }, []);
 
+  // ✅ SAFE NORMALIZE
+  const normalize = (str: any) =>
+    String(str || "")
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .trim();
+
+  // ✅ SAFE dynamic extractor
+  const getUniqueValues = (key: keyof AITool) => {
+    return Array.from(
+      new Set(
+        aiTools.flatMap(tool => {
+          const value = tool[key];
+          if (Array.isArray(value)) {
+            return value.map(v => normalize(v));
+          }
+          if (typeof value === "string") {
+            return [normalize(value)];
+          }
+          return [];
+        })
+      )
+    );
+  };
+
+  const dynamicOptions = {
+    purposes: getUniqueValues("purposes"),
+    skillLevels: getUniqueValues("skillLevel"),
+    platforms: getUniqueValues("platforms"),
+    languages: getUniqueValues("languages"),
+  };
+
   // Handle Enter key press for AI search
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -65,33 +97,32 @@ export function RecommendationPage() {
   // Get keyword suggestions
   const getKeywordSuggestions = () => {
     if (!searchKeyword.trim()) return [];
-    
+
     const keyword = searchKeyword.toLowerCase();
     const suggestions = new Set<string>();
-    
+
     aiTools.forEach(tool => {
-      if (tool.name?.toLowerCase().includes(keyword)) {
+      if ((tool.name || "").toLowerCase().includes(keyword)) {
         suggestions.add(tool.name);
       }
       (tool.tags || []).forEach(tag => {
-        if (tag?.toLowerCase().includes(keyword)) {
+        if ((tag || "").toLowerCase().includes(keyword)) {
           suggestions.add(tag);
         }
       });
       (tool.purposes || []).forEach(purpose => {
-        if (purpose?.toLowerCase().includes(keyword)) {
+        if ((purpose || "").toLowerCase().includes(keyword)) {
           suggestions.add(purpose);
         }
       });
     });
-    
+
     return Array.from(suggestions).slice(0, 8);
   };
 
   const suggestions = getKeywordSuggestions();
 
   // Filter tools based on keyword search or AI search
-  // For AI search - maintain LLaMA's ranking order
   const keywordFilteredTools = isAiSearch
     ? aiToolIds
         .map(id => aiTools.find(tool => tool.id === id))
@@ -100,24 +131,32 @@ export function RecommendationPage() {
     ? aiTools.filter(tool => {
         const keyword = searchKeyword.toLowerCase();
         return (
-          tool.name?.toLowerCase().includes(keyword) ||
-          tool.description?.toLowerCase().includes(keyword) ||
-          (tool.tags || []).some(tag => tag?.toLowerCase().includes(keyword)) ||
-          (tool.purposes || []).some(purpose => purpose?.toLowerCase().includes(keyword))
+          (tool.name || "").toLowerCase().includes(keyword) ||
+          (tool.description || "").toLowerCase().includes(keyword) ||
+          (tool.tags || []).some(tag => (tag || "").toLowerCase().includes(keyword)) ||
+          (tool.purposes || []).some(purpose => (purpose || "").toLowerCase().includes(keyword))
         );
       })
     : aiTools;
 
   const filteredTools = keywordFilteredTools.filter(tool => {
+    // Purpose filter
     if (appliedFilters.purposes.length > 0) {
-      const hasMatchingPurpose = appliedFilters.purposes.some(purpose => 
-        (tool.purposes || []).includes(purpose)
-      );
+      const hasMatchingPurpose = appliedFilters.purposes.some(purpose => {
+        const normalizedFilter = normalize(purpose);
+        const matchPurpose = (tool.purposes || []).some(p =>
+          normalize(p).includes(normalizedFilter)
+        );
+        const matchTags = (tool.tags || []).some(tag =>
+          normalize(tag).includes(normalizedFilter)
+        );
+        return matchPurpose || matchTags;
+      });
       if (!hasMatchingPurpose) return false;
     }
 
     if (appliedFilters.skillLevels.length > 0) {
-      const hasMatchingSkillLevel = appliedFilters.skillLevels.some(level => 
+      const hasMatchingSkillLevel = appliedFilters.skillLevels.some(level =>
         (tool.skillLevel || []).includes(level)
       );
       if (!hasMatchingSkillLevel) return false;
@@ -132,14 +171,14 @@ export function RecommendationPage() {
     }
 
     if (appliedFilters.platforms.length > 0) {
-      const hasMatchingPlatform = appliedFilters.platforms.some(platform => 
+      const hasMatchingPlatform = appliedFilters.platforms.some(platform =>
         (tool.platforms || []).includes(platform)
       );
       if (!hasMatchingPlatform) return false;
     }
 
     if (appliedFilters.languages.length > 0) {
-      const hasMatchingLanguage = appliedFilters.languages.some(lang => 
+      const hasMatchingLanguage = appliedFilters.languages.some(lang =>
         (tool.languages || []).includes(lang)
       );
       if (!hasMatchingLanguage) return false;
@@ -152,12 +191,11 @@ export function RecommendationPage() {
     return true;
   });
 
-  // Only sort by rating when NOT in AI search mode
-  // In AI search mode preserve LLaMA's ranking order
-  const sortedTools = isAiSearch 
-    ? filteredTools 
+  // Preserve LLaMA ranking in AI search mode
+  const sortedTools = isAiSearch
+    ? filteredTools
     : [...filteredTools].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    
+
   const displayedTools = topN ? sortedTools.slice(0, topN) : sortedTools;
 
   const handleApplyFilters = () => {
@@ -177,7 +215,7 @@ export function RecommendationPage() {
     setAiExplanation('');
     setAiToolIds([]);
   };
-  
+
   const handleCompareToggle = (toolId: string) => {
     setComparisonList(prev => {
       if (prev.includes(toolId)) {
@@ -332,6 +370,7 @@ export function RecommendationPage() {
           <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
             <FilterPanel
               filters={filters}
+              dynamicOptions={dynamicOptions}
               onFilterChange={setFilters}
               onApply={handleApplyFilters}
             />

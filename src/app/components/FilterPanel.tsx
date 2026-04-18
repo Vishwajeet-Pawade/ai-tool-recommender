@@ -8,9 +8,10 @@ interface FilterPanelProps {
   filters: FilterState;
   onFilterChange: (filters: FilterState) => void;
   onApply: () => void;
+  dynamicOptions?: Partial<Record<keyof FilterState, string[]>>; // ✅ added
 }
 
-export function FilterPanel({ filters, onFilterChange, onApply }: FilterPanelProps) {
+export function FilterPanel({ filters, onFilterChange, onApply, dynamicOptions }: FilterPanelProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     purposes: true,
     skillLevels: true,
@@ -112,43 +113,43 @@ export function FilterPanel({ filters, onFilterChange, onApply }: FilterPanelPro
         <FilterSection
           title="Purpose / Use Case"
           category="purposes"
-          options={filterOptions.purposes}
+          options={dynamicOptions?.purposes || filterOptions.purposes}
         />
 
         <FilterSection
           title="Skill Level"
           category="skillLevels"
-          options={filterOptions.skillLevels}
+          options={dynamicOptions?.skillLevels || filterOptions.skillLevels}
         />
 
         <FilterSection
           title="Budget"
           category="budget"
-          options={filterOptions.budget}
+          options={dynamicOptions?.budget || filterOptions.budget}
         />
 
         <FilterSection
           title="Accuracy Priority"
           category="accuracy"
-          options={filterOptions.accuracy}
+          options={dynamicOptions?.accuracy || filterOptions.accuracy}
         />
 
         <FilterSection
           title="Platform"
           category="platforms"
-          options={filterOptions.platforms}
+          options={dynamicOptions?.platforms || filterOptions.platforms}
         />
 
         <FilterSection
           title="Programming Languages"
           category="languages"
-          options={filterOptions.languages}
+          options={dynamicOptions?.languages || filterOptions.languages}
         />
 
         <FilterSection
           title="Privacy"
           category="privacy"
-          options={filterOptions.privacy}
+          options={dynamicOptions?.privacy || filterOptions.privacy}
         />
       </div>
 
