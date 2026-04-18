@@ -4,7 +4,7 @@ import { FilterPanel } from '../components/FilterPanel';
 import { ToolCard } from '../components/ToolCard';
 import { FilterState, defaultFilters } from '../data/tools';
 import type { AITool } from '../data/tools';
-import { Sparkles, SlidersHorizontal, Search, X } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, Search, X, Bot } from 'lucide-react';
 
 export function RecommendationPage() {
 
@@ -19,158 +19,171 @@ export function RecommendationPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [topN, setTopN] = useState<number | null>(null);
 
+  // AI Search states
+  const [aiExplanation, setAiExplanation] = useState('');
+  const [aiToolIds, setAiToolIds] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [isAiSearch, setIsAiSearch] = useState(false);
+
   useEffect(() => {
     fetch("http://localhost:5000/tools")
       .then(res => res.json())
       .then(data => setAiTools(data))
       .catch(err => console.error(err));
   }, []);
-// ✅ SAFE NORMALIZE (no datatype impact)
-const normalize = (str: any) =>
-  String(str || "")
-    .toLowerCase()
-    .replace(/_/g, " ")
-    .trim();
 
-// ✅ SAFE dynamic extractor (handles array + string safely)
-const getUniqueValues = (key: keyof AITool) => {
-  return Array.from(
-    new Set(
-      aiTools.flatMap(tool => {
-        const value = tool[key];
+  // ✅ SAFE NORMALIZE
+  const normalize = (str: any) =>
+    String(str || "")
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .trim();
 
-        if (Array.isArray(value)) {
-          return value.map(v => normalize(v));
+  // ✅ SAFE dynamic extractor
+  const getUniqueValues = (key: keyof AITool) => {
+    return Array.from(
+      new Set(
+        aiTools.flatMap(tool => {
+          const value = tool[key];
+          if (Array.isArray(value)) {
+            return value.map(v => normalize(v));
+          }
+          if (typeof value === "string") {
+            return [normalize(value)];
+          }
+          return [];
+        })
+      )
+    );
+  };
+
+  const dynamicOptions = {
+    purposes: getUniqueValues("purposes"),
+    skillLevels: getUniqueValues("skillLevel"),
+    platforms: getUniqueValues("platforms"),
+    languages: getUniqueValues("languages"),
+  };
+
+  // Handle Enter key press for AI search
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const wordCount = searchKeyword.trim().split(' ').length;
+      
+      if (wordCount > 3) {
+        setAiLoading(true);
+        setIsAiSearch(true);
+        setShowSuggestions(false);
+
+        try {
+          const response = await fetch("http://localhost:5000/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: searchKeyword })
+          });
+
+          const data = await response.json();
+          setAiExplanation(data.explanation);
+          setAiToolIds(data.toolIds);
+        } catch (err) {
+          console.error(err);
+          setAiExplanation("Something went wrong. Please try again.");
         }
 
-        if (typeof value === "string") {
-          return [normalize(value)];
-        }
-
-        return [];
-      })
-    )
-  );
-};
-
-// ✅ ONLY for array fields (no datatype risk)
-const dynamicOptions = {
-  purposes: getUniqueValues("purposes"),
-  skillLevels: getUniqueValues("skillLevel"),
-  platforms: getUniqueValues("platforms"),
-  languages: getUniqueValues("languages"),
-};
-  
-  // Get keyword suggestions based on current search
-  // 🔥 ONLY CHANGED PARTS — rest same
-
-// Get keyword suggestions based on current search
-const getKeywordSuggestions = () => {
-  if (!searchKeyword.trim()) return [];
-
-  const keyword = searchKeyword.toLowerCase();
-  const suggestions = new Set<string>();
-
-  aiTools.forEach(tool => {
-    // ✅ Safe name check
-    if ((tool.name || "").toLowerCase().includes(keyword)) {
-      suggestions.add(tool.name);
+        setAiLoading(false);
+      }
     }
+  };
 
-    // ✅ Safe tags
-    (tool.tags || []).forEach(tag => {
-      if ((tag || "").toLowerCase().includes(keyword)) {
-        suggestions.add(tag);
+  // Get keyword suggestions
+  const getKeywordSuggestions = () => {
+    if (!searchKeyword.trim()) return [];
+
+    const keyword = searchKeyword.toLowerCase();
+    const suggestions = new Set<string>();
+
+    aiTools.forEach(tool => {
+      if ((tool.name || "").toLowerCase().includes(keyword)) {
+        suggestions.add(tool.name);
       }
+      (tool.tags || []).forEach(tag => {
+        if ((tag || "").toLowerCase().includes(keyword)) {
+          suggestions.add(tag);
+        }
+      });
+      (tool.purposes || []).forEach(purpose => {
+        if ((purpose || "").toLowerCase().includes(keyword)) {
+          suggestions.add(purpose);
+        }
+      });
     });
 
-    // ✅ Safe purposes
-    (tool.purposes || []).forEach(purpose => {
-      if ((purpose || "").toLowerCase().includes(keyword)) {
-        suggestions.add(purpose);
-      }
-    });
-  });
+    return Array.from(suggestions).slice(0, 8);
+  };
 
-  return Array.from(suggestions).slice(0, 8);
-};
+  const suggestions = getKeywordSuggestions();
 
-const suggestions = getKeywordSuggestions();
-
-// Filter tools based on keyword search
-const keywordFilteredTools = searchKeyword.trim()
-  ? aiTools.filter(tool => {
-      const keyword = searchKeyword.toLowerCase();
-      return (
-        (tool.name || "").toLowerCase().includes(keyword) ||
-        (tool.description || "").toLowerCase().includes(keyword) ||
-        (tool.tags || []).some(tag =>
-          (tag || "").toLowerCase().includes(keyword)
-        ) ||
-        (tool.purposes || []).some(purpose =>
-          (purpose || "").toLowerCase().includes(keyword)
-        )
-      );
-    })
-  : aiTools;
+  // Filter tools based on keyword search or AI search
+  const keywordFilteredTools = isAiSearch
+    ? aiToolIds
+        .map(id => aiTools.find(tool => tool.id === id))
+        .filter((tool): tool is AITool => tool !== undefined)
+    : searchKeyword.trim()
+    ? aiTools.filter(tool => {
+        const keyword = searchKeyword.toLowerCase();
+        return (
+          (tool.name || "").toLowerCase().includes(keyword) ||
+          (tool.description || "").toLowerCase().includes(keyword) ||
+          (tool.tags || []).some(tag => (tag || "").toLowerCase().includes(keyword)) ||
+          (tool.purposes || []).some(purpose => (purpose || "").toLowerCase().includes(keyword))
+        );
+      })
+    : aiTools;
 
   const filteredTools = keywordFilteredTools.filter(tool => {
     // Purpose filter
-   if (appliedFilters.purposes.length > 0) {
-  const hasMatchingPurpose = appliedFilters.purposes.some(purpose => {
-    const normalizedFilter = normalize(purpose);
+    if (appliedFilters.purposes.length > 0) {
+      const hasMatchingPurpose = appliedFilters.purposes.some(purpose => {
+        const normalizedFilter = normalize(purpose);
+        const matchPurpose = (tool.purposes || []).some(p =>
+          normalize(p).includes(normalizedFilter)
+        );
+        const matchTags = (tool.tags || []).some(tag =>
+          normalize(tag).includes(normalizedFilter)
+        );
+        return matchPurpose || matchTags;
+      });
+      if (!hasMatchingPurpose) return false;
+    }
 
-    // check purposes
-    const matchPurpose = (tool.purposes || []).some(p =>
-      normalize(p).includes(normalizedFilter)
-    );
-
-    // check tags
-    const matchTags = (tool.tags || []).some(tag =>
-      normalize(tag).includes(normalizedFilter)
-    );
-
-    return matchPurpose || matchTags;
-  });
-
-  if (!hasMatchingPurpose) return false;
-}
-
-    // Skill level filter
     if (appliedFilters.skillLevels.length > 0) {
-      const hasMatchingSkillLevel = appliedFilters.skillLevels.some(level => 
-        tool.skillLevel.includes(level)
+      const hasMatchingSkillLevel = appliedFilters.skillLevels.some(level =>
+        (tool.skillLevel || []).includes(level)
       );
       if (!hasMatchingSkillLevel) return false;
     }
 
-    // Budget filter
     if (appliedFilters.budget.length > 0) {
       if (!appliedFilters.budget.includes(tool.pricing)) return false;
     }
 
-    // Accuracy filter
     if (appliedFilters.accuracy.length > 0) {
       if (!appliedFilters.accuracy.includes(tool.accuracy)) return false;
     }
 
-    // Platform filter
     if (appliedFilters.platforms.length > 0) {
-      const hasMatchingPlatform = appliedFilters.platforms.some(platform => 
-        tool.platforms.includes(platform)
+      const hasMatchingPlatform = appliedFilters.platforms.some(platform =>
+        (tool.platforms || []).includes(platform)
       );
       if (!hasMatchingPlatform) return false;
     }
 
-    // Language filter
     if (appliedFilters.languages.length > 0) {
-      const hasMatchingLanguage = appliedFilters.languages.some(lang => 
-        tool.languages.includes(lang)
+      const hasMatchingLanguage = appliedFilters.languages.some(lang =>
+        (tool.languages || []).includes(lang)
       );
       if (!hasMatchingLanguage) return false;
     }
 
-    // Privacy filter
     if (appliedFilters.privacy.length > 0) {
       if (!appliedFilters.privacy.includes(tool.privacy)) return false;
     }
@@ -178,8 +191,11 @@ const keywordFilteredTools = searchKeyword.trim()
     return true;
   });
 
-  // Sort by rating (descending) and apply Top N filter
-  const sortedTools = [...filteredTools].sort((a, b) => b.rating - a.rating);
+  // Preserve LLaMA ranking in AI search mode
+  const sortedTools = isAiSearch
+    ? filteredTools
+    : [...filteredTools].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
   const displayedTools = topN ? sortedTools.slice(0, topN) : sortedTools;
 
   const handleApplyFilters = () => {
@@ -195,8 +211,11 @@ const keywordFilteredTools = searchKeyword.trim()
   const clearSearch = () => {
     setSearchKeyword('');
     setShowSuggestions(false);
+    setIsAiSearch(false);
+    setAiExplanation('');
+    setAiToolIds([]);
   };
-  
+
   const handleCompareToggle = (toolId: string) => {
     setComparisonList(prev => {
       if (prev.includes(toolId)) {
@@ -239,6 +258,7 @@ const keywordFilteredTools = searchKeyword.trim()
                 {displayedTools.length} tools found
                 {activeFilterCount > 0 && ` (${activeFilterCount} filters active)`}
                 {topN && ` • Showing top ${topN}`}
+                {isAiSearch && ` • AI Ranked Results`}
               </p>
             </div>
           </div>
@@ -261,18 +281,21 @@ const keywordFilteredTools = searchKeyword.trim()
 
           {/* Search Bar and Top N Filter */}
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
-            {/* Keyword Search */}
             <div className="flex-1 relative">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by keyword (e.g., coding, image, free)..."
+                  placeholder="Search by keyword or ask AI (e.g., I need a free tool for coding)..."
                   value={searchKeyword}
                   onChange={(e) => {
                     setSearchKeyword(e.target.value);
                     setShowSuggestions(true);
+                    setIsAiSearch(false);
+                    setAiExplanation('');
+                    setAiToolIds([]);
                   }}
+                  onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   className="w-full pl-12 pr-12 py-3 rounded-xl border-2 border-gray-300 focus:border-blue-500 focus:outline-none"
@@ -288,7 +311,7 @@ const keywordFilteredTools = searchKeyword.trim()
               </div>
 
               {/* Suggestions Dropdown */}
-              {showSuggestions && suggestions.length > 0 && (
+              {showSuggestions && suggestions.length > 0 && !isAiSearch && (
                 <div className="absolute z-50 w-full mt-2 bg-white rounded-xl border-2 border-gray-200 shadow-lg max-h-64 overflow-y-auto">
                   <div className="p-2">
                     <p className="text-xs text-gray-500 px-3 py-2">Suggestions</p>
@@ -321,6 +344,25 @@ const keywordFilteredTools = searchKeyword.trim()
               </select>
             </div>
           </div>
+
+          {/* AI Loading */}
+          {aiLoading && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-xl border-2 border-blue-200 flex items-center gap-3">
+              <Bot className="w-5 h-5 text-blue-600 animate-pulse" />
+              <p className="text-blue-700 font-medium">AI is thinking...</p>
+            </div>
+          )}
+
+          {/* AI Explanation Box */}
+          {aiExplanation && !aiLoading && (
+            <div className="mt-4 p-5 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Bot className="w-5 h-5 text-blue-600" />
+                <p className="font-semibold text-blue-700">AI Recommendation</p>
+              </div>
+              <p className="text-gray-700">{aiExplanation}</p>
+            </div>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-4 gap-8">
@@ -328,7 +370,7 @@ const keywordFilteredTools = searchKeyword.trim()
           <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
             <FilterPanel
               filters={filters}
-               dynamicOptions={dynamicOptions} 
+              dynamicOptions={dynamicOptions}
               onFilterChange={setFilters}
               onApply={handleApplyFilters}
             />
@@ -343,7 +385,7 @@ const keywordFilteredTools = searchKeyword.trim()
                 </div>
                 <h3 className="text-xl font-semibold mb-2">No tools found</h3>
                 <p className="text-gray-600 mb-6">
-                  Try adjusting your filters to see more results
+                  Try adjusting your filters or ask AI differently
                 </p>
                 <button
                   onClick={() => {
@@ -351,6 +393,9 @@ const keywordFilteredTools = searchKeyword.trim()
                     setAppliedFilters(defaultFilters);
                     setSearchKeyword('');
                     setTopN(null);
+                    setIsAiSearch(false);
+                    setAiExplanation('');
+                    setAiToolIds([]);
                   }}
                   className="rounded-xl border-2 border-gray-300 px-4 py-2 hover:bg-gray-50"
                 >
@@ -359,13 +404,20 @@ const keywordFilteredTools = searchKeyword.trim()
               </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-6">
-                {displayedTools.map(tool => (
-                  <ToolCard
-                    key={tool.id}
-                    tool={tool}
-                    onCompare={handleCompareToggle}
-                    isInComparison={comparisonList.includes(tool.id)}
-                  />
+                {displayedTools.map((tool, index) => (
+                  <div key={tool.id} className="relative">
+                    {/* AI Rank Label */}
+                    {isAiSearch && (
+                      <div className="absolute -top-3 -left-3 z-10 w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                        {index + 1}
+                      </div>
+                    )}
+                    <ToolCard
+                      tool={tool}
+                      onCompare={handleCompareToggle}
+                      isInComparison={comparisonList.includes(tool.id)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
