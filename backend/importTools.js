@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 const Tool = require("./models/Tool");
 const tools = require("./toolsData")
@@ -8,8 +7,6 @@ mongoose.connect(
 )
 .then(()=>console.log("MongoDB connected"))
 .catch(err=>console.log(err));
-
-
 
 async function insertTools(){
   for (let tool of tools) {

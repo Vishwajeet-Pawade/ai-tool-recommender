@@ -25,59 +25,116 @@ export function RecommendationPage() {
       .then(data => setAiTools(data))
       .catch(err => console.error(err));
   }, []);
+// ✅ SAFE NORMALIZE (no datatype impact)
+const normalize = (str: any) =>
+  String(str || "")
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .trim();
 
-  // Get keyword suggestions based on current search
-  const getKeywordSuggestions = () => {
-    if (!searchKeyword.trim()) return [];
-    
-    const keyword = searchKeyword.toLowerCase();
-    const suggestions = new Set<string>();
-    
-    aiTools.forEach(tool => {
-      // Check name
-      if (tool.name.toLowerCase().includes(keyword)) {
-        suggestions.add(tool.name);
-      }
-      // Check tags
-      tool.tags.forEach(tag => {
-        if (tag.toLowerCase().includes(keyword)) {
-          suggestions.add(tag);
+// ✅ SAFE dynamic extractor (handles array + string safely)
+const getUniqueValues = (key: keyof AITool) => {
+  return Array.from(
+    new Set(
+      aiTools.flatMap(tool => {
+        const value = tool[key];
+
+        if (Array.isArray(value)) {
+          return value.map(v => normalize(v));
         }
-      });
-      // Check purposes
-      tool.purposes.forEach(purpose => {
-        if (purpose.toLowerCase().includes(keyword)) {
-          suggestions.add(purpose);
+
+        if (typeof value === "string") {
+          return [normalize(value)];
         }
-      });
-    });
-    
-    return Array.from(suggestions).slice(0, 8);
-  };
 
-  const suggestions = getKeywordSuggestions();
-
-  // Filter tools based on keyword search
-  const keywordFilteredTools = searchKeyword.trim()
-    ? aiTools.filter(tool => {
-        const keyword = searchKeyword.toLowerCase();
-        return (
-          tool.name.toLowerCase().includes(keyword) ||
-          tool.description.toLowerCase().includes(keyword) ||
-          tool.tags.some(tag => tag.toLowerCase().includes(keyword)) ||
-          tool.purposes.some(purpose => purpose.toLowerCase().includes(keyword))
-        );
+        return [];
       })
-    : aiTools;
+    )
+  );
+};
+
+// ✅ ONLY for array fields (no datatype risk)
+const dynamicOptions = {
+  purposes: getUniqueValues("purposes"),
+  skillLevels: getUniqueValues("skillLevel"),
+  platforms: getUniqueValues("platforms"),
+  languages: getUniqueValues("languages"),
+};
+  
+  // Get keyword suggestions based on current search
+  // 🔥 ONLY CHANGED PARTS — rest same
+
+// Get keyword suggestions based on current search
+const getKeywordSuggestions = () => {
+  if (!searchKeyword.trim()) return [];
+
+  const keyword = searchKeyword.toLowerCase();
+  const suggestions = new Set<string>();
+
+  aiTools.forEach(tool => {
+    // ✅ Safe name check
+    if ((tool.name || "").toLowerCase().includes(keyword)) {
+      suggestions.add(tool.name);
+    }
+
+    // ✅ Safe tags
+    (tool.tags || []).forEach(tag => {
+      if ((tag || "").toLowerCase().includes(keyword)) {
+        suggestions.add(tag);
+      }
+    });
+
+    // ✅ Safe purposes
+    (tool.purposes || []).forEach(purpose => {
+      if ((purpose || "").toLowerCase().includes(keyword)) {
+        suggestions.add(purpose);
+      }
+    });
+  });
+
+  return Array.from(suggestions).slice(0, 8);
+};
+
+const suggestions = getKeywordSuggestions();
+
+// Filter tools based on keyword search
+const keywordFilteredTools = searchKeyword.trim()
+  ? aiTools.filter(tool => {
+      const keyword = searchKeyword.toLowerCase();
+      return (
+        (tool.name || "").toLowerCase().includes(keyword) ||
+        (tool.description || "").toLowerCase().includes(keyword) ||
+        (tool.tags || []).some(tag =>
+          (tag || "").toLowerCase().includes(keyword)
+        ) ||
+        (tool.purposes || []).some(purpose =>
+          (purpose || "").toLowerCase().includes(keyword)
+        )
+      );
+    })
+  : aiTools;
 
   const filteredTools = keywordFilteredTools.filter(tool => {
     // Purpose filter
-    if (appliedFilters.purposes.length > 0) {
-      const hasMatchingPurpose = appliedFilters.purposes.some(purpose => 
-        tool.purposes.includes(purpose)
-      );
-      if (!hasMatchingPurpose) return false;
-    }
+   if (appliedFilters.purposes.length > 0) {
+  const hasMatchingPurpose = appliedFilters.purposes.some(purpose => {
+    const normalizedFilter = normalize(purpose);
+
+    // check purposes
+    const matchPurpose = (tool.purposes || []).some(p =>
+      normalize(p).includes(normalizedFilter)
+    );
+
+    // check tags
+    const matchTags = (tool.tags || []).some(tag =>
+      normalize(tag).includes(normalizedFilter)
+    );
+
+    return matchPurpose || matchTags;
+  });
+
+  if (!hasMatchingPurpose) return false;
+}
 
     // Skill level filter
     if (appliedFilters.skillLevels.length > 0) {
@@ -271,6 +328,7 @@ export function RecommendationPage() {
           <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
             <FilterPanel
               filters={filters}
+               dynamicOptions={dynamicOptions} 
               onFilterChange={setFilters}
               onApply={handleApplyFilters}
             />
