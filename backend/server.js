@@ -1,6 +1,7 @@
 const express = require("express")
 const mongoose = require("mongoose")
 const cors = require("cors")
+require("dotenv").config() // ADD THIS LINE
 
 const app = express()
 
@@ -15,8 +16,10 @@ mongoose.connect(
 .catch(err=>console.log(err))
 
 const toolRoutes = require("./routes/tools")
+const chatRoutes = require("./routes/chat") // ADD THIS LINE
 
 app.use("/tools", toolRoutes)
+app.use("/chat", chatRoutes) // ADD THIS LINE
 
 app.listen(5000,()=>{
  console.log("Server running on port 5000")

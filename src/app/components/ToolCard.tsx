@@ -22,9 +22,9 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-medium">{tool.rating}</span>
+                <span className="text-sm font-medium">{tool.rating || 0}</span>
               </div>
-              <span className="text-sm text-gray-500">({tool.reviews.toLocaleString()} reviews)</span>
+              <span className="text-sm text-gray-500">({(tool.reviews || 0).toLocaleString()} reviews)</span>
             </div>
           </div>
         </div>
@@ -33,9 +33,9 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
       <p className="text-gray-600 text-sm mb-4 line-clamp-2">{tool.description}</p>
 
       {/* Benchmark Scores */}
-      {(tool.humanEval > 0 || tool.mbpp > 0) && (
+      {((tool.humanEval || 0) > 0 || (tool.mbpp || 0) > 0) && (
         <div className="grid grid-cols-2 gap-3 mb-4">
-          {tool.humanEval > 0 && (
+          {(tool.humanEval || 0) > 0 && (
             <div className="bg-blue-50 rounded-lg p-3">
               <div className="text-xs text-gray-600 mb-1">HumanEval</div>
               <div className="flex items-center gap-2">
@@ -44,7 +44,7 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
               </div>
             </div>
           )}
-          {tool.mbpp > 0 && (
+          {(tool.mbpp || 0) > 0 && (
             <div className="bg-purple-50 rounded-lg p-3">
               <div className="text-xs text-gray-600 mb-1">MBPP</div>
               <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
 
       {/* Tags */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {tool.tags.slice(0, 3).map(tag => (
+        {(tool.tags || []).slice(0, 3).map(tag => (
           <Badge key={tag} variant="secondary" className="text-xs">
             {tag}
           </Badge>
