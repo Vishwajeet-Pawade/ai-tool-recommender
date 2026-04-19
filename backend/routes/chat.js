@@ -6,66 +6,115 @@ require("dotenv").config();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+// ✅ Category keywords mapping
+const categoryKeywords = {
+  "image generation": ["image", "photo", "picture", "art", "design", "visual", "dall", "midjourney", "stable", "flux"],
+  "video generation": ["video", "animation", "film", "movie", "clip", "runway", "sora"],
+  "coding": ["code", "coding", "programming", "developer", "debug", "copilot", "github", "cursor"],
+  "writing": ["write", "writing", "content", "blog", "copy", "essay", "text", "jasper", "grammarly"],
+  "research": ["research", "search", "data", "analysis", "perplexity", "scholar"],
+  "chatbots": ["chat", "assistant", "chatbot", "conversation", "gpt", "claude", "gemini"],
+  "data analysis": ["data", "analysis", "analytics", "spreadsheet", "excel", "sql"],
+  "video generation": ["video", "animation", "runway", "sora", "clip"],
+};
+
+// ✅ Detect category from user query
+function detectCategory(query) {
+  const q = query.toLowerCase();
+  for (const [category, keywords] of Object.entries(categoryKeywords)) {
+    if (keywords.some(k => q.includes(k))) {
+      return category;
+    }
+  }
+  return null;
+}
+
 router.post("/", async (req, res) => {
-  const { message } = req.body;
+  const { message, filters } = req.body;
 
   try {
-    // Step 1 - Fetch all tools from MongoDB
-    const tools = await Tool.find({});
+    // Build full context
+    let fullContext = "";
+    if (message) fullContext += message + " ";
+    if (filters?.purposes?.length > 0) fullContext += filters.purposes.join(" ") + " ";
 
-    // Step 2 - Format tools with ALL fields for LLaMA
-    const toolsList = tools.map(t => 
-      `ID: ${t.id} | Name: ${t.name} | Description: ${t.description} | Purposes: ${(t.purposes || []).join(", ")} | Tags: ${(t.tags || []).join(", ")} | Pricing: ${t.pricing} | Rating: ${t.rating} | Reviews: ${t.reviews} | Popularity: ${t.popularity} | HumanEval: ${t.humanEval} | MBPP: ${t.mbpp} | Accuracy: ${t.accuracy} | Speed: ${t.speed}`
+    // ✅ Step 1 — Detect category from context
+    const detectedCategory = detectCategory(fullContext);
+
+    // ✅ Step 2 — Fetch only relevant tools from MongoDB
+    let relevantTools;
+
+    if (detectedCategory) {
+      // Fetch tools matching detected category
+      relevantTools = await Tool.find({
+        purposes: { $regex: new RegExp(detectedCategory, 'i') }
+      }).limit(20);
+
+      // If not enough results, also search by tags
+      if (relevantTools.length < 3) {
+        relevantTools = await Tool.find({
+          $or: [
+            { purposes: { $regex: new RegExp(detectedCategory, 'i') } },
+            { tags: { $regex: new RegExp(detectedCategory, 'i') } }
+          ]
+        }).limit(20);
+      }
+    } else if (filters?.purposes?.length > 0) {
+      // Use filter purposes to fetch tools
+      relevantTools = await Tool.find({
+        purposes: { $regex: new RegExp(filters.purposes[0], 'i') }
+      }).limit(20);
+    } else {
+      // No category detected — use top rated tools
+      relevantTools = await Tool.find({})
+        .sort({ rating: -1 })
+        .limit(15);
+    }
+
+    // ✅ Step 3 — Format tools minimally to save tokens
+    const toolsList = relevantTools.map(t =>
+      `ID:${t.id}|Name:${t.name}|Purposes:${(t.purposes || []).slice(0, 2).join(",")}|Pricing:${t.pricing}|Rating:${t.rating}|Popularity:${t.popularity}`
     ).join("\n");
 
-    // Step 3 - Send to LLaMA with ranking instruction
+    // ✅ Step 4 — Build user context
+    let userContext = "";
+    if (message) userContext += `User needs: ${message}. `;
+    if (filters?.purposes?.length > 0) userContext += `Purpose: ${filters.purposes.join(",")}. `;
+    if (filters?.budget?.length > 0) userContext += `Pricing: ${filters.budget.join(",")}. `;
+    if (filters?.skillLevels?.length > 0) userContext += `Skill: ${filters.skillLevels.join(",")}. `;
+
+    // ✅ Step 5 — Send to LLaMA
     const response = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
+      max_tokens: 200,
       messages: [
         {
           role: "system",
-          content: `You are an AI tool recommender assistant.
-          Here are all available tools in our platform with their complete data:
-          ${toolsList}
-          
-          When user asks something:
-          1. Find the most RELEVANT tools for their specific need
-          2. Rank them from BEST to WORST based on:
-             - How well the tool matches the user's need
-             - Rating and reviews
-             - Popularity
-             - HumanEval and MBPP scores (for coding related questions)
-             - Pricing (if user mentions free or paid)
-          3. Only recommend tools that actually exist in the list above
-          4. Return maximum 5 most relevant tools
-          
-          Always reply in this exact JSON format only, nothing else:
-          {
-            "explanation": "Brief explanation of why these tools are recommended in this order",
-            "toolIds": ["best-tool-id", "second-best-id", "third-best-id"]
-          }`
+          content: `AI tool recommender. Available tools:\n${toolsList}\n\nRank max 5 best matching tools.\nReply ONLY as JSON: {"explanation":"brief reason","toolIds":["id1","id2","id3"]}`
         },
         {
           role: "user",
-          content: message
+          content: userContext || "Show best AI tools"
         }
       ]
     });
 
-    // Step 4 - Parse response
+    // ✅ Step 6 — Parse and validate response
     const rawReply = response.choices[0].message.content;
-    
-    // Clean response in case LLaMA adds extra text
     const jsonMatch = rawReply.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Invalid response format from AI");
-    }
-    
+    if (!jsonMatch) throw new Error("Invalid AI response");
+
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // Validate IDs exist in database
+    const allIds = relevantTools.map(t => t.id);
+    const validIds = (parsed.toolIds || []).filter((id) =>
+      allIds.includes(id)
+    );
 
     res.json({
       explanation: parsed.explanation,
-      toolIds: parsed.toolIds
+      toolIds: validIds.length > 0 ? validIds : allIds.slice(0, 5)
     });
 
   } catch (error) {
