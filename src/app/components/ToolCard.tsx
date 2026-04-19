@@ -17,65 +17,40 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
   const safeHumanEval = typeof tool.humanEval === 'number' ? tool.humanEval : 0;
   const safeMbpp = typeof tool.mbpp === 'number' ? tool.mbpp : 0;
   const safeTags = Array.isArray(tool.tags) ? tool.tags : [];
-  const safeLogo = tool.logo && typeof tool.logo === 'string' && !tool.logo.startsWith('http') 
-    ? tool.logo 
-    : '🤖';
 
   return (
-    <div
-      className={`relative rounded-2xl p-6 transition-all duration-500 cursor-pointer group card-hover ${
-        theme === 'dark'
-          ? 'bg-[#111111] border border-[rgba(255,215,0,0.15)] hover:border-[rgba(255,215,0,0.6)]'
-          : 'bg-white border border-[rgba(184,134,11,0.2)] hover:border-[rgba(184,134,11,0.6)]'
-      }`}
-      style={{
-        boxShadow: theme === 'dark'
-          ? '0 4px 20px rgba(0,0,0,0.5)'
-          : '0 4px 20px rgba(0,0,0,0.08)'
-      }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = theme === 'dark'
-          ? '0 8px 40px rgba(255,215,0,0.15)'
-          : '0 8px 40px rgba(184,134,11,0.15)';
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = theme === 'dark'
-          ? '0 4px 20px rgba(0,0,0,0.5)'
-          : '0 4px 20px rgba(0,0,0,0.08)';
-      }}
-    >
-      {/* Gold top border line on hover */}
-      <div
-        className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"
-        style={{ background: 'linear-gradient(90deg, #FFD700, #B8860B, #FFD700)' }}
-      />
+    <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-all hover:border-blue-300">
 
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
 
           {/* Logo */}
-          <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl transition-all duration-300 group-hover:scale-110 flex-shrink-0 ${
-            theme === 'dark'
-              ? 'bg-[#1a1a1a] border border-[rgba(255,215,0,0.2)]'
-              : 'bg-[#f8f8f8] border border-[rgba(184,134,11,0.2)]'
-          }`}>
-            {safeLogo}
+          <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
+            {tool.logo && tool.logo.startsWith('http') ? (
+              <img
+                src={tool.logo}
+                alt={tool.name}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  if (target.parentElement) {
+                    target.parentElement.innerHTML = '<span style="font-size:1.5rem">🤖</span>';
+                  }
+                }}
+              />
+            ) : (
+              <span className="text-3xl">{tool.logo || '🤖'}</span>
+            )}
           </div>
 
           <div>
-            <h3 className={`font-bold text-lg transition-all duration-300 group-hover:text-[#FFD700] ${
-              theme === 'dark' ? 'text-white' : 'text-[#0a0a0a]'
-            }`}>
-              {tool.name ?? 'Unknown Tool'}
-            </h3>
-
+            <h3 className="font-semibold text-lg text-gray-900">{tool.name}</h3>
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 fill-[#FFD700] text-[#FFD700]" />
-                <span className="text-sm font-bold text-[#FFD700]">
-                  {safeRating.toFixed(1)}
-                </span>
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span className="text-sm font-medium">{(tool.rating ?? 0).toFixed(1)}</span>
               </div>
               <span className={`text-xs ${
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
@@ -108,65 +83,33 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
       </p>
 
       {/* Benchmark Scores */}
-      {safeHumanEval > 0 || safeMbpp > 0 ? (
+      {((tool.humanEval ?? 0) > 0 || (tool.mbpp ?? 0) > 0) && (
         <div className="grid grid-cols-2 gap-3 mb-4">
-          {safeHumanEval > 0 && (
-            <div className={`rounded-xl p-3 border ${
-              theme === 'dark'
-                ? 'bg-[#1a1a1a] border-[rgba(255,215,0,0.1)]'
-                : 'bg-[#f8f8f8] border-[rgba(184,134,11,0.1)]'
-            }`}>
-              <div className={`text-xs mb-1 flex items-center gap-1 ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-              }`}>
-                <Zap className="w-3 h-3 text-[#FFD700]" />
-                HumanEval
-              </div>
+          {(tool.humanEval ?? 0) > 0 && (
+            <div className="bg-blue-50 rounded-lg p-3">
+              <div className="text-xs text-gray-600 mb-1">HumanEval</div>
               <div className="flex items-center gap-2">
-                <div className="text-lg font-bold text-[#FFD700]">
-                  {safeHumanEval}%
-                </div>
-                <TrendingUp className="w-4 h-4 text-[#FFD700]" />
+                <div className="text-lg font-bold text-blue-600">{tool.humanEval}%</div>
+                <TrendingUp className="w-4 h-4 text-blue-600" />
               </div>
             </div>
           )}
-
-          {safeMbpp > 0 && (
-            <div className={`rounded-xl p-3 border ${
-              theme === 'dark'
-                ? 'bg-[#1a1a1a] border-[rgba(255,215,0,0.1)]'
-                : 'bg-[#f8f8f8] border-[rgba(184,134,11,0.1)]'
-            }`}>
-              <div className={`text-xs mb-1 flex items-center gap-1 ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-              }`}>
-                <Zap className="w-3 h-3 text-[#FFD700]" />
-                MBPP
-              </div>
+          {(tool.mbpp ?? 0) > 0 && (
+            <div className="bg-purple-50 rounded-lg p-3">
+              <div className="text-xs text-gray-600 mb-1">MBPP</div>
               <div className="flex items-center gap-2">
-                <div className="text-lg font-bold text-[#FFD700]">
-                  {safeMbpp}%
-                </div>
-                <TrendingUp className="w-4 h-4 text-[#FFD700]" />
+                <div className="text-lg font-bold text-purple-600">{tool.mbpp}%</div>
+                <TrendingUp className="w-4 h-4 text-purple-600" />
               </div>
             </div>
           )}
         </div>
-      ) : null}
+      )}
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {safeTags.slice(0, 3).map((tag, index) => (
-          <span
-            key={`${tag}-${index}`}
-            className={`text-xs px-3 py-1 rounded-full border transition-all duration-300 ${
-              theme === 'dark'
-                ? 'bg-[#1a1a1a] border-[rgba(255,215,0,0.2)] text-gray-400 hover:border-[#FFD700] hover:text-[#FFD700]'
-                : 'bg-[#f8f8f8] border-[rgba(184,134,11,0.2)] text-gray-500 hover:border-[#B8860B] hover:text-[#B8860B]'
-            }`}
-          >
-            {tag}
-          </span>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {(tool.tags ?? []).slice(0, 3).map((tag) => (
+          <span key={tag} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">{tag}</span>
         ))}
       </div>
 
@@ -182,20 +125,12 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
             View Details
           </div>
         </Link>
-
         {onCompare && (
           <button
             onClick={() => onCompare(tool.id)}
-            className={`rounded-xl border px-4 py-2.5 transition-all duration-300 ${
-              isInComparison
-                ? 'border-[#FFD700] text-black font-bold'
-                : theme === 'dark'
-                ? 'border-[rgba(255,215,0,0.3)] text-[#FFD700] hover:bg-[rgba(255,215,0,0.1)]'
-                : 'border-[rgba(184,134,11,0.3)] text-[#B8860B] hover:bg-[rgba(184,134,11,0.1)]'
+            className={`rounded-lg border-2 px-4 py-2 ${
+              isInComparison ? 'bg-blue-600 text-white hover:bg-blue-700' : 'hover:bg-gray-50'
             }`}
-            style={isInComparison ? {
-              background: 'linear-gradient(135deg, #FFD700, #B8860B)'
-            } : {}}
           >
             <GitCompare className="w-4 h-4" />
           </button>
