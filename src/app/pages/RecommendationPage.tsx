@@ -6,6 +6,7 @@ import { FilterState, defaultFilters } from '../data/tools';
 import type { AITool } from '../data/tools';
 import { Sparkles, SlidersHorizontal, Search, X, Bot } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { createPortal } from 'react-dom';
 
 // ─── Session State Persistence ───────────────────────────────────────────────
 const SESSION_KEY = 'explore_state';
@@ -21,63 +22,21 @@ function loadState() {
   } catch { return null; }
 }
 
-// ─── Purpose Keyword Mapping ─────────────────────────────────────────────────
-// Maps user search terms to all possible purpose/tag variations in the database
-const purposeMap: Record<string, string[]> = {
-  "coding":            ["coding", "generate_code", "debug", "refactor", "app_development", "prototype", "automation", "code", "Coding"],
-  "code":              ["coding", "generate_code", "debug", "refactor", "app_development", "code", "Coding"],
-  "image":             ["image", "image generation", "generate_image", "design", "graphics", "creative", "Image Generation"],
-  "image generation":  ["image", "image generation", "generate_image", "design", "Image Generation"],
-  "video":             ["video", "video generation", "create_video", "animation", "editing", "Video Generation"],
-  "video generation":  ["video", "video generation", "create_video", "animation", "Video Generation"],
-  "writing":           ["writing", "write_content", "edit", "proofread", "editing", "content", "paraphrasing", "creative", "Writing"],
-  "research":          ["research", "data_extraction", "analysis", "search", "Research"],
-  "data":              ["data", "analytics", "analyze_data", "visualization", "prediction", "business"],
-  "analytics":         ["analytics", "data", "analyze_data", "visualization", "prediction"],
-  "chat":              ["chat", "chatbots", "companion", "conversation", "Chat"],
-  "music":             ["music", "audio", "Music"],
-  "voice":             ["voice", "audio", "speech", "Voice"],
-  "presentation":      ["presentation", "design", "storytelling", "Presentation"],
-  "seo":               ["seo", "writing", "content", "SEO"],
-  "marketing":         ["marketing", "ads", "sales", "automation", "Marketing"],
-  "legal":             ["legal", "analysis", "Legal"],
-  "support":           ["support", "customer support", "Support"],
-  "design":            ["design", "graphics", "image", "creative", "presentation", "Design"],
-  "automation":        ["automation", "productivity", "workflow", "Automation"],
-  "productivity":      ["productivity", "automation", "workflow", "Productivity"],
-  "language":          ["translation", "language", "multilingual", "Language"],
-  "translation":       ["translation", "language", "multilingual", "Translation"],
-  "audio":             ["audio", "voice", "music", "speech", "Audio"],
-  "speech":            ["speech", "voice", "audio", "Speech"],
-  "summarization":     ["summarization", "research", "writing", "Summarization"],
-  "summarize":         ["summarization", "research", "writing", "Summarization"],
-};
-
-// ─── Helper ───────────────────────────────────────────────────────────────────
-function getMatchingPurposes(keyword: string): string[] {
-  const k = keyword.toLowerCase().trim();
-  for (const [key, values] of Object.entries(purposeMap)) {
-    if (k === key || k.includes(key) || key.includes(k)) return values;
-  }
-  return [k];
-}
-
-// ─── Scoring Formula ──────────────────────────────────────────────────────────
+// ─── Scoring Formula (fallback when AI is not active) ────────────────────────
 function scoreTools(tool: AITool, keyword: string): number {
-  const matchingPurposes = getMatchingPurposes(keyword);
+  const k = keyword.toLowerCase().trim();
   const toolPurposes = (Array.isArray(tool.purposes) ? tool.purposes : [tool.purposes])
     .filter(Boolean)
     .map((p: any) => String(p).toLowerCase().replace(/_/g, ' ').trim());
+  const toolTags = (Array.isArray(tool.tags) ? tool.tags : [])
+    .filter(Boolean)
+    .map((t: any) => String(t).toLowerCase().trim());
 
-  // Purpose relevance: exact match = 200, partial = 100
-  const purposeScore = matchingPurposes.some(mp =>
-    toolPurposes.some(tp => tp === mp.toLowerCase())
-  ) ? 200
-  : matchingPurposes.some(mp =>
-    toolPurposes.some(tp => tp.includes(mp.toLowerCase()) || mp.toLowerCase().includes(tp))
-  ) ? 100 : 0;
+  const purposeScore =
+    toolPurposes.some(tp => tp === k) ? 200 :
+    toolPurposes.some(tp => tp.includes(k) || k.includes(tp)) ? 100 :
+    toolTags.some(tt => tt.includes(k) || k.includes(tt)) ? 50 : 0;
 
-  // Performance scores from database fields
   const rating     = (tool.rating     || 0) * 20;
   const popularity = (tool.popularity || 0);
   const reviews    = Math.min((tool.reviews  || 0) / 1000, 20);
@@ -89,33 +48,36 @@ function scoreTools(tool: AITool, keyword: string): number {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function RecommendationPage() {
-  const navigate   = useNavigate();
-  const { theme }  = useTheme();
+  const navigate    = useNavigate();
+  const { theme }   = useTheme();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const saved = loadState();
 
   // ── State ──
-  const [aiTools,        setAiTools]        = useState<AITool[]>([]);
-  const [filters,        setFilters]        = useState<FilterState>(saved?.filters        ?? defaultFilters);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(saved?.appliedFilters ?? defaultFilters);
-  const [comparisonList, setComparisonList] = useState<string[]>  (saved?.comparisonList  ?? []);
+  const [aiTools,           setAiTools]           = useState<AITool[]>([]);
+  const [filters,           setFilters]           = useState<FilterState>(saved?.filters        ?? defaultFilters);
+  const [appliedFilters,    setAppliedFilters]    = useState<FilterState>(saved?.appliedFilters ?? defaultFilters);
+  const [comparisonList,    setComparisonList]    = useState<string[]>([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [searchKeyword,  setSearchKeyword]  = useState<string>    (saved?.searchKeyword   ?? '');
-  const [showSuggestions,setShowSuggestions]= useState(false);
-  const [topN,           setTopN]           = useState<number | null>(saved?.topN         ?? null);
-  const [isLoading,      setIsLoading]      = useState(true);
-
-  const [aiExplanation,  setAiExplanation]  = useState<string>    (saved?.aiExplanation   ?? '');
-  const [aiToolIds,      setAiToolIds]      = useState<string[]>  (saved?.aiToolIds        ?? []);
-  const [aiLoading,      setAiLoading]      = useState(false);
-  const [isAiActive,     setIsAiActive]     = useState<boolean>   (saved?.isAiActive       ?? false);
+  const [searchKeyword,     setSearchKeyword]     = useState<string>(saved?.searchKeyword ?? '');
+  const [showSuggestions,   setShowSuggestions]   = useState(false);
+  const [topN,              setTopN]              = useState<number | null>(saved?.topN ?? null);
+  const [isLoading,         setIsLoading]         = useState(true);
+  const [aiExplanation,     setAiExplanation]     = useState<string>(saved?.aiExplanation ?? '');
+  const [aiToolIds,         setAiToolIds]         = useState<string[]>(saved?.aiToolIds ?? []);
+  const [aiLoading,         setAiLoading]         = useState(false);
+  const [isAiActive,        setIsAiActive]        = useState<boolean>(saved?.isAiActive ?? false);
 
   // ── Persist state ──
   useEffect(() => {
-    saveState({ searchKeyword, topN, filters, appliedFilters, comparisonList, aiExplanation, aiToolIds, isAiActive });
-  }, [searchKeyword, topN, filters, appliedFilters, comparisonList, aiExplanation, aiToolIds, isAiActive]);
+    saveState({ searchKeyword, topN, filters, appliedFilters, aiExplanation, aiToolIds, isAiActive });
+  }, [searchKeyword, topN, filters, appliedFilters, aiExplanation, aiToolIds, isAiActive]);
 
+  // Reset comparison list on every mount (page visit/return)
+  useEffect(() => {
+    setComparisonList([]);
+  }, []);
   // ── Fetch tools ──
   useEffect(() => {
     setIsLoading(true);
@@ -149,13 +111,12 @@ export function RecommendationPage() {
     languages:   getUniqueValues('languages'),
   };
 
-  // ── AI call (only for full sentence queries > 3 words) ──
+  // ── AI call — ALL searches go through AI ──
   const callAI = useCallback(async (keyword: string, currentFilters: FilterState) => {
-    const wordCount  = keyword.trim().split(' ').length;
+    const hasSearch  = keyword.trim() !== '';
     const hasFilters = Object.values(currentFilters).some(f => Array.isArray(f) && f.length > 0);
-    const isFullSentence = keyword.trim() !== '' && wordCount > 3;
 
-    if (!isFullSentence && !hasFilters) {
+    if (!hasSearch && !hasFilters) {
       setIsAiActive(false); setAiExplanation(''); setAiToolIds([]);
       return;
     }
@@ -165,7 +126,7 @@ export function RecommendationPage() {
       const res  = await fetch('http://localhost:5000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: isFullSentence ? keyword : '', filters: currentFilters }),
+        body: JSON.stringify({ message: keyword, filters: currentFilters }),
       });
       const data = await res.json();
       setAiExplanation(data.explanation ?? '');
@@ -177,48 +138,35 @@ export function RecommendationPage() {
     setAiLoading(false);
   }, []);
 
-  // ── Search input handler ──
+  // ── Search input handler — ALL searches go through AI ──
   const handleSearchChange = (val: string) => {
     setSearchKeyword(val);
     setShowSuggestions(true);
 
-    // If cleared → reset AI
     if (!val.trim()) {
       setIsAiActive(false); setAiExplanation(''); setAiToolIds([]);
       return;
     }
 
-    // Short keyword (≤3 words) → consistent DB results, no AI
-    const wordCount = val.trim().split(' ').length;
-    if (wordCount <= 3) {
-      setIsAiActive(false); setAiExplanation(''); setAiToolIds([]);
-      return;
-    }
-
-    // Full sentence → debounce AI call
+    // Debounce AI call for all searches
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => callAI(val, appliedFilters), 700);
+    debounceRef.current = setTimeout(() => callAI(val, appliedFilters), 800);
   };
 
-  // ── Enter key → confirm short search, trigger AI for long ──
+  // ── Enter key → trigger AI immediately ──
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       setShowSuggestions(false);
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      const wordCount = searchKeyword.trim().split(' ').length;
-      if (wordCount > 3) {
-        callAI(searchKeyword, appliedFilters);
-      } else {
-        setIsAiActive(false); setAiExplanation(''); setAiToolIds([]);
-      }
+      callAI(searchKeyword, appliedFilters);
     }
   };
 
-  // ── Filter change → same DB logic as search, NO AI ──
+  // ── Filter change → also goes through AI ──
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
     setAppliedFilters(newFilters);
-    setIsAiActive(false); setAiExplanation(''); setAiToolIds([]);
+    callAI(searchKeyword, newFilters);
   };
 
   // ── Suggestions ──
@@ -229,111 +177,67 @@ export function RecommendationPage() {
     aiTools.forEach(tool => {
       if (tool.name?.toLowerCase().includes(kw)) s.add(tool.name);
       toArray(tool.tags).forEach(tag => { if (tag.toLowerCase().includes(kw)) s.add(tag); });
-      toArray(tool.purposes).forEach(p   => { if (p.toLowerCase().includes(kw))   s.add(p); });
+      toArray(tool.purposes).forEach(p => { if (p.toLowerCase().includes(kw)) s.add(p); });
     });
     return Array.from(s).slice(0, 8);
   };
   const suggestions = getKeywordSuggestions();
 
   // ── Filtering ──
-  // Step 1: keyword/purpose filter (search bar)
+  // Step 1: AI results or keyword filter
   const keywordFilteredTools: AITool[] = isAiActive
     ? aiToolIds.map(id => aiTools.find(t => t.id === id)).filter((t): t is AITool => !!t)
     : searchKeyword.trim()
-    ? (() => {
-        const matchingPurposes = getMatchingPurposes(searchKeyword);
-        return aiTools.filter(tool => {
-          const tp = toArray(tool.purposes).map(normalize);
-          const tt = toArray(tool.tags).map(normalize);
-          const tn = normalize(tool.name);
-          return (
-            matchingPurposes.some(mp => tp.some(p => p.includes(mp) || mp.includes(p))) ||
-            matchingPurposes.some(mp => tt.some(t => t.includes(mp) || mp.includes(t))) ||
-            tn.includes(searchKeyword.toLowerCase())
-          );
-        });
-      })()
+    ? aiTools.filter(tool => {
+        const kw = searchKeyword.toLowerCase();
+        return (
+          normalize(tool.name).includes(kw) ||
+          normalize(tool.description).includes(kw) ||
+          toArray(tool.purposes).some(p => normalize(p).includes(kw) || kw.includes(normalize(p))) ||
+          toArray(tool.tags).some(t => normalize(t).includes(kw) || kw.includes(normalize(t)))
+        );
+      })
     : aiTools;
 
-  // Step 2: panel filters
-  // const filteredTools = isAiActive
-  //   ? keywordFilteredTools
-  //   : keywordFilteredTools.filter(tool => {
-  //       // Purposes filter
-  //       if ((appliedFilters.purposes ?? []).length > 0) {
-  //         const hasMatch = appliedFilters.purposes.some(purpose => {
-  //           const matchingPurposes = getMatchingPurposes(purpose);
-  //           return matchingPurposes.some(mp =>
-  //             toArray(tool.purposes).some(tp => normalize(tp).includes(mp) || mp.includes(normalize(tp))) ||
-  //             toArray(tool.tags).some(tt => normalize(tt).includes(mp) || mp.includes(normalize(tt)))
-  //           );
-  //         });
-  //         if (!hasMatch) return false;
-  //       }
-  //       if ((appliedFilters.skillLevels ?? []).length > 0) {
-  //         const sl = toArray(tool.skillLevel).map(normalize);
-  //         if (!appliedFilters.skillLevels.some(l => sl.includes(normalize(l)))) return false;
-  //       }
-  //       if ((appliedFilters.budget ?? []).length > 0) {
-  //         if (!tool.pricing || !appliedFilters.budget.includes(tool.pricing)) return false;
-  //       }
-  //       if ((appliedFilters.accuracy ?? []).length > 0) {
-  //         if (!tool.accuracy || !appliedFilters.accuracy.includes(tool.accuracy)) return false;
-  //       }
-  //       if ((appliedFilters.platforms ?? []).length > 0) {
-  //         const pl = toArray(tool.platforms).map(normalize);
-  //         if (!appliedFilters.platforms.some(p => pl.includes(normalize(p)))) return false;
-  //       }
-  //       if ((appliedFilters.languages ?? []).length > 0) {
-  //         const lang = toArray(tool.languages).map(normalize);
-  //         if (!appliedFilters.languages.some(l => lang.includes(normalize(l)))) return false;
-  //       }
-  //       if ((appliedFilters.privacy ?? []).length > 0) {
-  //         if (!tool.privacy || !appliedFilters.privacy.includes(tool.privacy)) return false;
-  //       }
-  //       return true;
-  //     });
+  // Step 2: Apply panel filters on top
   const filteredTools = keywordFilteredTools.filter(tool => {
-  if ((appliedFilters.purposes ?? []).length > 0) {
-    const hasMatch = appliedFilters.purposes.some(purpose => {
-      const nf = normalize(purpose);
-      return (
-        toArray(tool.purposes).some(p => normalize(p).includes(nf)) ||
-        toArray(tool.tags).some(t => normalize(t).includes(nf))
-      );
-    });
-    if (!hasMatch) return false;
-  }
-  if ((appliedFilters.skillLevels ?? []).length > 0) {
-    const skillLevels = toArray(tool.skillLevel).map(normalize);
-    const hasMatch = appliedFilters.skillLevels.some(l => skillLevels.includes(normalize(l)));
-    if (!hasMatch) return false;
-  }
-  if ((appliedFilters.budget ?? []).length > 0) {
-    if (!tool.pricing || !appliedFilters.budget.includes(tool.pricing)) return false;
-  }
-  if ((appliedFilters.accuracy ?? []).length > 0) {
-    if (!tool.accuracy || !appliedFilters.accuracy.includes(tool.accuracy)) return false;
-  }
-  if ((appliedFilters.platforms ?? []).length > 0) {
-    const platforms = toArray(tool.platforms).map(normalize);
-    const hasMatch = appliedFilters.platforms.some(p => platforms.includes(normalize(p)));
-    if (!hasMatch) return false;
-  }
-  if ((appliedFilters.languages ?? []).length > 0) {
-    const languages = toArray(tool.languages).map(normalize);
-    const hasMatch = appliedFilters.languages.some(l => languages.includes(normalize(l)));
-    if (!hasMatch) return false;
-  }
-  if ((appliedFilters.privacy ?? []).length > 0) {
-    if (!tool.privacy || !appliedFilters.privacy.includes(tool.privacy)) return false;
-  }
-  return true;
-});
+    if ((appliedFilters.purposes ?? []).length > 0) {
+      const hasMatch = appliedFilters.purposes.some(purpose => {
+        const nf = normalize(purpose);
+        return (
+          toArray(tool.purposes).some(p => normalize(p).includes(nf) || nf.includes(normalize(p))) ||
+          toArray(tool.tags).some(t => normalize(t).includes(nf) || nf.includes(normalize(t)))
+        );
+      });
+      if (!hasMatch) return false;
+    }
+    if ((appliedFilters.skillLevels ?? []).length > 0) {
+      const sl = toArray(tool.skillLevel).map(normalize);
+      if (!appliedFilters.skillLevels.some(l => sl.includes(normalize(l)))) return false;
+    }
+    if ((appliedFilters.budget ?? []).length > 0) {
+      if (!tool.pricing || !appliedFilters.budget.includes(tool.pricing)) return false;
+    }
+    if ((appliedFilters.accuracy ?? []).length > 0) {
+      if (!tool.accuracy || !appliedFilters.accuracy.includes(tool.accuracy)) return false;
+    }
+    if ((appliedFilters.platforms ?? []).length > 0) {
+      const pl = toArray(tool.platforms).map(normalize);
+      if (!appliedFilters.platforms.some(p => pl.includes(normalize(p)))) return false;
+    }
+    if ((appliedFilters.languages ?? []).length > 0) {
+      const lang = toArray(tool.languages).map(normalize);
+      if (!appliedFilters.languages.some(l => lang.includes(normalize(l)))) return false;
+    }
+    if ((appliedFilters.privacy ?? []).length > 0) {
+      if (!tool.privacy || !appliedFilters.privacy.includes(tool.privacy)) return false;
+    }
+    return true;
+  });
 
-  // Step 3: rank results
+  // Step 3: Sort — AI order when active, score-based otherwise
   const currentKeyword = searchKeyword.trim() ||
-    (appliedFilters.purposes && appliedFilters.purposes.length > 0 ? appliedFilters.purposes[0] : '');
+    (appliedFilters.purposes?.length > 0 ? appliedFilters.purposes[0] : '');
 
   const sortedTools = isAiActive
     ? filteredTools
@@ -345,7 +249,8 @@ export function RecommendationPage() {
   const handleSuggestionClick = (s: string) => {
     setSearchKeyword(s);
     setShowSuggestions(false);
-    setIsAiActive(false); setAiExplanation(''); setAiToolIds([]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    callAI(s, appliedFilters);
   };
 
   const clearAll = () => {
@@ -378,7 +283,7 @@ export function RecommendationPage() {
     (count, arr) => count + (Array.isArray(arr) ? arr.length : 0), 0
   );
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen py-8 px-4 sm:px-6 lg:px-8 transition-all duration-300 ${
       theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-[#f8f8f8]'
@@ -587,14 +492,22 @@ export function RecommendationPage() {
         </div>
 
         {/* Floating Compare Button */}
-        {comparisonList.length > 0 && (
-          <div className="fixed bottom-8 right-8 z-40">
-            <button onClick={handleCompareClick}
-              className="text-black rounded-xl shadow-2xl px-6 py-4 font-bold text-lg transition-all duration-300 hover:scale-105 pulse-gold"
-              style={{ background: 'linear-gradient(135deg, #FFD700, #B8860B)' }}>
+        {comparisonList.length > 0 && createPortal(
+          <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9999 }}>
+            <button
+              onClick={handleCompareClick}
+              className="text-black rounded-xl shadow-2xl px-6 py-4 font-bold text-lg pulse-gold"
+              style={{
+                background: 'linear-gradient(135deg, #FFD700, #B8860B)',
+                transition: 'transform 0.2s ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
+              onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+            >
               Compare {comparisonList.length} {comparisonList.length === 1 ? 'Tool' : 'Tools'}
             </button>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
