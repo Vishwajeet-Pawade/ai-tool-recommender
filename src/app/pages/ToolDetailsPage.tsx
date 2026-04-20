@@ -49,10 +49,10 @@ export function ToolDetailsPage() {
   }
 
   const benchmarkData = [
-    { name: 'HumanEval', score: tool.humanEval, average: 45 },
-    { name: 'MBPP', score: tool.mbpp, average: 50 },
-    { name: 'Speed', score: tool.speed, average: 75 },
-    { name: 'Popularity', score: tool.popularity, average: 70 }
+    { name: 'HumanEval', score: tool.humanEval ?? 0, average: 45 },
+    { name: 'MBPP', score: tool.mbpp ?? 0, average: 50 },
+    { name: 'Speed', score: tool.speed ?? 0, average: 75 },
+    { name: 'Popularity', score: tool.popularity ?? 0, average: 70 },
   ].filter(item => item.score > 0);
 
   return (
@@ -74,25 +74,37 @@ export function ToolDetailsPage() {
           Back to Explore
         </Link>
 
-        {/* Header Section */}
-        <div className={`rounded-2xl border p-8 mb-6 fade-in-up ${
+        {/* Header */}
+        <div className={`rounded-2xl border p-8 mb-6 ${
           theme === 'dark'
             ? 'bg-[#111111] border-[rgba(255,215,0,0.15)]'
             : 'bg-white border-[rgba(184,134,11,0.15)]'
-        }`}
-        style={{ boxShadow: theme === 'dark' ? '0 4px 40px rgba(255,215,0,0.05)' : '0 4px 40px rgba(0,0,0,0.05)' }}>
-
-          {/* Gold top line */}
+        }`}>
           <div className="h-1 rounded-full mb-6"
             style={{ background: 'linear-gradient(90deg, #FFD700, #B8860B, #FFD700)' }} />
 
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className={`w-24 h-24 rounded-2xl flex items-center justify-center text-5xl flex-shrink-0 border ${
+            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden border ${
               theme === 'dark'
                 ? 'bg-[#1a1a1a] border-[rgba(255,215,0,0.2)]'
                 : 'bg-[#f8f8f8] border-[rgba(184,134,11,0.2)]'
             }`}>
-              {tool.logo}
+              {tool.logo && tool.logo.startsWith('http') ? (
+                <img
+                  src={tool.logo}
+                  alt={tool.name}
+                  className="w-full h-full object-contain rounded-2xl"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    if (target.parentElement) {
+                      target.parentElement.innerHTML = '<span style="font-size:2rem">🤖</span>';
+                    }
+                  }}
+                />
+              ) : (
+                <span className="text-4xl">{tool.logo || '🤖'}</span>
+              )}
             </div>
 
             <div className="flex-1">
@@ -120,14 +132,14 @@ export function ToolDetailsPage() {
               <div className="flex flex-wrap items-center gap-6">
                 <div className="flex items-center gap-2">
                   <Star className="w-5 h-5 fill-[#FFD700] text-[#FFD700]" />
-                  <span className="font-bold text-lg text-[#FFD700]">{tool.rating}</span>
+                  <span className="font-bold text-lg text-[#FFD700]">{tool.rating ?? 'N/A'}</span>
                   <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}>
                     ({(tool.reviews ?? 0).toLocaleString()} reviews)
                   </span>
                 </div>
                 <div className={`flex items-center gap-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                   <Users className="w-5 h-5" />
-                  <span>Popularity: {tool.popularity}%</span>
+                  <span>Popularity: {tool.popularity ?? 'N/A'}</span>
                 </div>
                 <span className={`text-xs px-3 py-1 rounded-full font-medium ${
                   tool.pricing === 'Free'
@@ -136,21 +148,20 @@ export function ToolDetailsPage() {
                     ? 'bg-[rgba(255,215,0,0.15)] text-[#FFD700] border border-[rgba(255,215,0,0.3)]'
                     : 'bg-red-500/20 text-red-400 border border-red-500/30'
                 }`}>
-                  {tool.pricing}
+                  {tool.pricing ?? 'N/A'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Tags */}
           <div className={`flex flex-wrap gap-2 mt-6 pt-6 border-t ${
             theme === 'dark' ? 'border-[rgba(255,215,0,0.1)]' : 'border-[rgba(184,134,11,0.1)]'
           }`}>
             {(tool.tags ?? []).map(tag => (
-              <span key={tag} className={`text-xs px-3 py-1 rounded-full border transition-all duration-300 ${
+              <span key={tag} className={`text-xs px-3 py-1 rounded-full border ${
                 theme === 'dark'
-                  ? 'bg-[#1a1a1a] border-[rgba(255,215,0,0.2)] text-gray-400 hover:border-[#FFD700] hover:text-[#FFD700]'
-                  : 'bg-[#f8f8f8] border-[rgba(184,134,11,0.2)] text-gray-500 hover:border-[#B8860B] hover:text-[#B8860B]'
+                  ? 'bg-[#1a1a1a] border-[rgba(255,215,0,0.2)] text-gray-400'
+                  : 'bg-[#f8f8f8] border-[rgba(184,134,11,0.2)] text-gray-500'
               }`}>
                 {tag}
               </span>
@@ -168,17 +179,17 @@ export function ToolDetailsPage() {
             <span className="shimmer">Overview</span>
           </h2>
           <p className={`leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            {tool.detailedDescription}
+            {tool.detailedDescription ?? tool.description ?? 'No description available.'}
           </p>
         </div>
 
         {/* Key Metrics */}
         <div className="grid md:grid-cols-4 gap-4 mb-6">
           {[
-            { icon: <TrendingUp className="w-5 h-5 text-[#FFD700]" />, label: 'Accuracy', value: tool.accuracy },
-            { icon: <Zap className="w-5 h-5 text-[#FFD700]" />, label: 'Speed', value: `${tool.speed}%` },
-            { icon: <Shield className="w-5 h-5 text-[#FFD700]" />, label: 'Privacy', value: tool.privacy },
-            { icon: <Globe className="w-5 h-5 text-[#FFD700]" />, label: 'Platforms', value: tool.platforms?.length },
+            { icon: <TrendingUp className="w-5 h-5 text-[#FFD700]" />, label: 'Accuracy', value: tool.accuracy ?? 'N/A' },
+            { icon: <Zap className="w-5 h-5 text-[#FFD700]" />, label: 'Speed', value: tool.speed != null ? `${tool.speed}%` : 'N/A' },
+            { icon: <Shield className="w-5 h-5 text-[#FFD700]" />, label: 'Privacy', value: tool.privacy ?? 'N/A' },
+            { icon: <Globe className="w-5 h-5 text-[#FFD700]" />, label: 'Platforms', value: (tool.platforms ?? []).length || 'N/A' },
           ].map((metric, i) => (
             <div key={i} className={`rounded-xl p-6 border card-hover ${
               theme === 'dark'
@@ -196,7 +207,7 @@ export function ToolDetailsPage() {
           ))}
         </div>
 
-        {/* Performance Benchmarks */}
+        {/* Benchmarks */}
         {benchmarkData.length > 0 && (
           <div className={`rounded-2xl border p-8 mb-6 ${
             theme === 'dark'
@@ -211,18 +222,14 @@ export function ToolDetailsPage() {
                 <BarChart data={benchmarkData}>
                   <CartesianGrid strokeDasharray="3 3"
                     stroke={theme === 'dark' ? 'rgba(255,215,0,0.05)' : 'rgba(0,0,0,0.05)'} />
-                  <XAxis dataKey="name"
-                    stroke={theme === 'dark' ? '#888888' : '#999999'} />
-                  <YAxis domain={[0, 100]}
-                    stroke={theme === 'dark' ? '#888888' : '#999999'} />
-                  <Tooltip
-                    contentStyle={{
-                      background: theme === 'dark' ? '#1a1a1a' : '#ffffff',
-                      border: '1px solid rgba(255,215,0,0.3)',
-                      borderRadius: '8px',
-                      color: theme === 'dark' ? '#ffffff' : '#0a0a0a'
-                    }}
-                  />
+                  <XAxis dataKey="name" stroke={theme === 'dark' ? '#888888' : '#999999'} />
+                  <YAxis domain={[0, 100]} stroke={theme === 'dark' ? '#888888' : '#999999'} />
+                  <Tooltip contentStyle={{
+                    background: theme === 'dark' ? '#1a1a1a' : '#ffffff',
+                    border: '1px solid rgba(255,215,0,0.3)',
+                    borderRadius: '8px',
+                    color: theme === 'dark' ? '#ffffff' : '#0a0a0a'
+                  }} />
                   <Legend />
                   <Bar dataKey="score" fill="#FFD700" name={tool.name} radius={[8, 8, 0, 0]} />
                   <Bar dataKey="average" fill="#333333" name="Industry Average" radius={[8, 8, 0, 0]} />
@@ -239,9 +246,7 @@ export function ToolDetailsPage() {
               ? 'bg-[#111111] border-[rgba(255,215,0,0.15)]'
               : 'bg-white border-[rgba(184,134,11,0.15)]'
           }`}>
-            <h2 className="text-2xl font-bold mb-6 text-green-400">
-              ✅ Pros
-            </h2>
+            <h2 className="text-2xl font-bold mb-6 text-green-400">✅ Pros</h2>
             <ul className="space-y-3">
               {(tool.pros ?? []).map((pro, index) => (
                 <li key={index} className="flex items-start gap-3">
@@ -257,9 +262,7 @@ export function ToolDetailsPage() {
               ? 'bg-[#111111] border-[rgba(255,215,0,0.15)]'
               : 'bg-white border-[rgba(184,134,11,0.15)]'
           }`}>
-            <h2 className="text-2xl font-bold mb-6 text-red-400">
-              ❌ Cons
-            </h2>
+            <h2 className="text-2xl font-bold mb-6 text-red-400">❌ Cons</h2>
             <ul className="space-y-3">
               {(tool.cons ?? []).map((con, index) => (
                 <li key={index} className="flex items-start gap-3">
@@ -280,7 +283,6 @@ export function ToolDetailsPage() {
           <h2 className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-[#0a0a0a]'}`}>
             <span className="shimmer">Technical Details</span>
           </h2>
-
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className={`font-bold mb-3 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-[#0a0a0a]'}`}>
@@ -288,14 +290,12 @@ export function ToolDetailsPage() {
                 Supported Platforms
               </h3>
               <div className="flex flex-wrap gap-2">
-                {(tool.platforms ?? []).map(platform => (
-                  <span key={platform} className={`text-xs px-3 py-1 rounded-full border ${
+                {(tool.platforms ?? []).map(p => (
+                  <span key={p} className={`text-xs px-3 py-1 rounded-full border ${
                     theme === 'dark'
                       ? 'border-[rgba(255,215,0,0.2)] text-gray-400'
                       : 'border-[rgba(184,134,11,0.2)] text-gray-500'
-                  }`}>
-                    {platform}
-                  </span>
+                  }`}>{p}</span>
                 ))}
               </div>
             </div>
@@ -307,14 +307,12 @@ export function ToolDetailsPage() {
                   Programming Languages
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {(tool.languages ?? []).map(lang => (
-                    <span key={lang} className={`text-xs px-3 py-1 rounded-full border ${
+                  {(tool.languages ?? []).map(l => (
+                    <span key={l} className={`text-xs px-3 py-1 rounded-full border ${
                       theme === 'dark'
                         ? 'border-[rgba(255,215,0,0.2)] text-gray-400'
                         : 'border-[rgba(184,134,11,0.2)] text-gray-500'
-                    }`}>
-                      {lang}
-                    </span>
+                    }`}>{l}</span>
                   ))}
                 </div>
               </div>
@@ -325,14 +323,12 @@ export function ToolDetailsPage() {
                 Skill Level
               </h3>
               <div className="flex flex-wrap gap-2">
-                {(tool.skillLevel ?? []).map(level => (
-                  <span key={level} className={`text-xs px-3 py-1 rounded-full border ${
+                {(tool.skillLevel ?? []).map(s => (
+                  <span key={s} className={`text-xs px-3 py-1 rounded-full border ${
                     theme === 'dark'
                       ? 'bg-[rgba(255,215,0,0.1)] border-[rgba(255,215,0,0.2)] text-[#FFD700]'
                       : 'bg-[rgba(184,134,11,0.1)] border-[rgba(184,134,11,0.2)] text-[#B8860B]'
-                  }`}>
-                    {level}
-                  </span>
+                  }`}>{s}</span>
                 ))}
               </div>
             </div>
@@ -343,14 +339,12 @@ export function ToolDetailsPage() {
                   IDE Integration
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {(tool.ideIntegration ?? []).map(ide => (
-                    <span key={ide} className={`text-xs px-3 py-1 rounded-full border ${
+                  {(tool.ideIntegration ?? []).map(i => (
+                    <span key={i} className={`text-xs px-3 py-1 rounded-full border ${
                       theme === 'dark'
                         ? 'bg-[rgba(255,215,0,0.1)] border-[rgba(255,215,0,0.2)] text-[#FFD700]'
                         : 'bg-[rgba(184,134,11,0.1)] border-[rgba(184,134,11,0.2)] text-[#B8860B]'
-                    }`}>
-                      {ide}
-                    </span>
+                    }`}>{i}</span>
                   ))}
                 </div>
               </div>

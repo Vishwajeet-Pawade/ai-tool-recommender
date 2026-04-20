@@ -256,43 +256,80 @@ export function RecommendationPage() {
     : aiTools;
 
   // Step 2: panel filters
-  const filteredTools = isAiActive
-    ? keywordFilteredTools
-    : keywordFilteredTools.filter(tool => {
-        // Purposes filter
-        if ((appliedFilters.purposes ?? []).length > 0) {
-          const hasMatch = appliedFilters.purposes.some(purpose => {
-            const matchingPurposes = getMatchingPurposes(purpose);
-            return matchingPurposes.some(mp =>
-              toArray(tool.purposes).some(tp => normalize(tp).includes(mp) || mp.includes(normalize(tp))) ||
-              toArray(tool.tags).some(tt => normalize(tt).includes(mp) || mp.includes(normalize(tt)))
-            );
-          });
-          if (!hasMatch) return false;
-        }
-        if ((appliedFilters.skillLevels ?? []).length > 0) {
-          const sl = toArray(tool.skillLevel).map(normalize);
-          if (!appliedFilters.skillLevels.some(l => sl.includes(normalize(l)))) return false;
-        }
-        if ((appliedFilters.budget ?? []).length > 0) {
-          if (!tool.pricing || !appliedFilters.budget.includes(tool.pricing)) return false;
-        }
-        if ((appliedFilters.accuracy ?? []).length > 0) {
-          if (!tool.accuracy || !appliedFilters.accuracy.includes(tool.accuracy)) return false;
-        }
-        if ((appliedFilters.platforms ?? []).length > 0) {
-          const pl = toArray(tool.platforms).map(normalize);
-          if (!appliedFilters.platforms.some(p => pl.includes(normalize(p)))) return false;
-        }
-        if ((appliedFilters.languages ?? []).length > 0) {
-          const lang = toArray(tool.languages).map(normalize);
-          if (!appliedFilters.languages.some(l => lang.includes(normalize(l)))) return false;
-        }
-        if ((appliedFilters.privacy ?? []).length > 0) {
-          if (!tool.privacy || !appliedFilters.privacy.includes(tool.privacy)) return false;
-        }
-        return true;
-      });
+  // const filteredTools = isAiActive
+  //   ? keywordFilteredTools
+  //   : keywordFilteredTools.filter(tool => {
+  //       // Purposes filter
+  //       if ((appliedFilters.purposes ?? []).length > 0) {
+  //         const hasMatch = appliedFilters.purposes.some(purpose => {
+  //           const matchingPurposes = getMatchingPurposes(purpose);
+  //           return matchingPurposes.some(mp =>
+  //             toArray(tool.purposes).some(tp => normalize(tp).includes(mp) || mp.includes(normalize(tp))) ||
+  //             toArray(tool.tags).some(tt => normalize(tt).includes(mp) || mp.includes(normalize(tt)))
+  //           );
+  //         });
+  //         if (!hasMatch) return false;
+  //       }
+  //       if ((appliedFilters.skillLevels ?? []).length > 0) {
+  //         const sl = toArray(tool.skillLevel).map(normalize);
+  //         if (!appliedFilters.skillLevels.some(l => sl.includes(normalize(l)))) return false;
+  //       }
+  //       if ((appliedFilters.budget ?? []).length > 0) {
+  //         if (!tool.pricing || !appliedFilters.budget.includes(tool.pricing)) return false;
+  //       }
+  //       if ((appliedFilters.accuracy ?? []).length > 0) {
+  //         if (!tool.accuracy || !appliedFilters.accuracy.includes(tool.accuracy)) return false;
+  //       }
+  //       if ((appliedFilters.platforms ?? []).length > 0) {
+  //         const pl = toArray(tool.platforms).map(normalize);
+  //         if (!appliedFilters.platforms.some(p => pl.includes(normalize(p)))) return false;
+  //       }
+  //       if ((appliedFilters.languages ?? []).length > 0) {
+  //         const lang = toArray(tool.languages).map(normalize);
+  //         if (!appliedFilters.languages.some(l => lang.includes(normalize(l)))) return false;
+  //       }
+  //       if ((appliedFilters.privacy ?? []).length > 0) {
+  //         if (!tool.privacy || !appliedFilters.privacy.includes(tool.privacy)) return false;
+  //       }
+  //       return true;
+  //     });
+  const filteredTools = keywordFilteredTools.filter(tool => {
+  if ((appliedFilters.purposes ?? []).length > 0) {
+    const hasMatch = appliedFilters.purposes.some(purpose => {
+      const nf = normalize(purpose);
+      return (
+        toArray(tool.purposes).some(p => normalize(p).includes(nf)) ||
+        toArray(tool.tags).some(t => normalize(t).includes(nf))
+      );
+    });
+    if (!hasMatch) return false;
+  }
+  if ((appliedFilters.skillLevels ?? []).length > 0) {
+    const skillLevels = toArray(tool.skillLevel).map(normalize);
+    const hasMatch = appliedFilters.skillLevels.some(l => skillLevels.includes(normalize(l)));
+    if (!hasMatch) return false;
+  }
+  if ((appliedFilters.budget ?? []).length > 0) {
+    if (!tool.pricing || !appliedFilters.budget.includes(tool.pricing)) return false;
+  }
+  if ((appliedFilters.accuracy ?? []).length > 0) {
+    if (!tool.accuracy || !appliedFilters.accuracy.includes(tool.accuracy)) return false;
+  }
+  if ((appliedFilters.platforms ?? []).length > 0) {
+    const platforms = toArray(tool.platforms).map(normalize);
+    const hasMatch = appliedFilters.platforms.some(p => platforms.includes(normalize(p)));
+    if (!hasMatch) return false;
+  }
+  if ((appliedFilters.languages ?? []).length > 0) {
+    const languages = toArray(tool.languages).map(normalize);
+    const hasMatch = appliedFilters.languages.some(l => languages.includes(normalize(l)));
+    if (!hasMatch) return false;
+  }
+  if ((appliedFilters.privacy ?? []).length > 0) {
+    if (!tool.privacy || !appliedFilters.privacy.includes(tool.privacy)) return false;
+  }
+  return true;
+});
 
   // Step 3: rank results
   const currentKeyword = searchKeyword.trim() ||

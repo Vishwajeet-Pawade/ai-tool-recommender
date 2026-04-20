@@ -7,25 +7,35 @@ require("dotenv").config();
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ✅ Category keywords mapping
-const categoryKeywords = {
-  "image generation": ["image", "photo", "picture", "art", "design", "visual", "dall", "midjourney", "stable", "flux"],
-  "video generation": ["video", "animation", "film", "movie", "clip", "runway", "sora"],
-  "coding": ["code", "coding", "programming", "developer", "debug", "copilot", "github", "cursor"],
-  "writing": ["write", "writing", "content", "blog", "copy", "essay", "text", "jasper", "grammarly"],
-  "research": ["research", "search", "data", "analysis", "perplexity", "scholar"],
-  "chatbots": ["chat", "assistant", "chatbot", "conversation", "gpt", "claude", "gemini"],
-  "data analysis": ["data", "analysis", "analytics", "spreadsheet", "excel", "sql"],
-  "video generation": ["video", "animation", "runway", "sora", "clip"],
-};
-
-// ✅ Detect category from user query
-function detectCategory(query) {
+// ✅ Dynamic category detection from database
+async function detectCategory(query) {
   const q = query.toLowerCase();
-  for (const [category, keywords] of Object.entries(categoryKeywords)) {
-    if (keywords.some(k => q.includes(k))) {
-      return category;
+  
+  // Fetch all unique purposes from MongoDB dynamically
+  const tools = await Tool.find({}, { purposes: 1, tags: 1 });
+  
+  const allPurposes = new Set();
+  const allTags = new Set();
+  
+  tools.forEach(tool => {
+    (tool.purposes || []).forEach(p => allPurposes.add(p.toLowerCase()));
+    (tool.tags || []).forEach(t => allTags.add(t.toLowerCase()));
+  });
+
+  // Check if query matches any purpose directly
+  for (const purpose of allPurposes) {
+    if (q.includes(purpose) || purpose.includes(q)) {
+      return purpose;
     }
   }
+
+  // Check if query matches any tag
+  for (const tag of allTags) {
+    if (q.includes(tag) || tag.includes(q)) {
+      return tag;
+    }
+  }
+
   return null;
 }
 
@@ -39,7 +49,7 @@ router.post("/", async (req, res) => {
     if (filters?.purposes?.length > 0) fullContext += filters.purposes.join(" ") + " ";
 
     // ✅ Step 1 — Detect category from context
-    const detectedCategory = detectCategory(fullContext);
+    const detectedCategory = await detectCategory(fullContext);
 
     // ✅ Step 2 — Fetch only relevant tools from MongoDB
     let relevantTools;

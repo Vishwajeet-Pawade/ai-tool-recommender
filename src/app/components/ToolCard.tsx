@@ -17,9 +17,6 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
   const safeHumanEval = typeof tool.humanEval === 'number' ? tool.humanEval : 0;
   const safeMbpp = typeof tool.mbpp === 'number' ? tool.mbpp : 0;
   const safeTags = Array.isArray(tool.tags) ? tool.tags : [];
-  const safeLogo = tool.logo && typeof tool.logo === 'string' && !tool.logo.startsWith('http') 
-    ? tool.logo 
-    : '🤖';
 
   return (
     <div
@@ -44,7 +41,7 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
           : '0 4px 20px rgba(0,0,0,0.08)';
       }}
     >
-      {/* Gold top border line on hover */}
+      {/* Gold top border on hover */}
       <div
         className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"
         style={{ background: 'linear-gradient(90deg, #FFD700, #B8860B, #FFD700)' }}
@@ -55,12 +52,27 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
         <div className="flex items-center gap-3">
 
           {/* Logo */}
-          <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl transition-all duration-300 group-hover:scale-110 flex-shrink-0 ${
+          <div className={`w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 transition-all duration-300 group-hover:scale-110 border ${
             theme === 'dark'
-              ? 'bg-[#1a1a1a] border border-[rgba(255,215,0,0.2)]'
-              : 'bg-[#f8f8f8] border border-[rgba(184,134,11,0.2)]'
+              ? 'bg-[#1a1a1a] border-[rgba(255,215,0,0.2)]'
+              : 'bg-[#f8f8f8] border-[rgba(184,134,11,0.2)]'
           }`}>
-            {safeLogo}
+            {tool.logo && tool.logo.startsWith('http') ? (
+              <img
+                src={tool.logo}
+                alt={tool.name}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  if (target.parentElement) {
+                    target.parentElement.innerHTML = '<span style="font-size:1.5rem">🤖</span>';
+                  }
+                }}
+              />
+            ) : (
+              <span className="text-3xl">{tool.logo || '🤖'}</span>
+            )}
           </div>
 
           <div>
@@ -69,7 +81,6 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
             }`}>
               {tool.name ?? 'Unknown Tool'}
             </h3>
-
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 fill-[#FFD700] text-[#FFD700]" />
@@ -108,7 +119,7 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
       </p>
 
       {/* Benchmark Scores */}
-      {safeHumanEval > 0 || safeMbpp > 0 ? (
+      {(safeHumanEval > 0 || safeMbpp > 0) && (
         <div className="grid grid-cols-2 gap-3 mb-4">
           {safeHumanEval > 0 && (
             <div className={`rounded-xl p-3 border ${
@@ -123,14 +134,11 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
                 HumanEval
               </div>
               <div className="flex items-center gap-2">
-                <div className="text-lg font-bold text-[#FFD700]">
-                  {safeHumanEval}%
-                </div>
+                <div className="text-lg font-bold text-[#FFD700]">{safeHumanEval}%</div>
                 <TrendingUp className="w-4 h-4 text-[#FFD700]" />
               </div>
             </div>
           )}
-
           {safeMbpp > 0 && (
             <div className={`rounded-xl p-3 border ${
               theme === 'dark'
@@ -144,15 +152,13 @@ export function ToolCard({ tool, onCompare, isInComparison }: ToolCardProps) {
                 MBPP
               </div>
               <div className="flex items-center gap-2">
-                <div className="text-lg font-bold text-[#FFD700]">
-                  {safeMbpp}%
-                </div>
+                <div className="text-lg font-bold text-[#FFD700]">{safeMbpp}%</div>
                 <TrendingUp className="w-4 h-4 text-[#FFD700]" />
               </div>
             </div>
           )}
         </div>
-      ) : null}
+      )}
 
       {/* Tags */}
       <div className="flex flex-wrap gap-2 mb-5">
