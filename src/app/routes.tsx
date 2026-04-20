@@ -5,6 +5,7 @@ import { RecommendationPage } from "./pages/RecommendationPage";
 import { ComparisonPage } from "./pages/ComparisonPage";
 import { ToolDetailsPage } from "./pages/ToolDetailsPage";
 import { AboutPage } from "./pages/AboutPage";
+import { WorkflowPage } from "./pages/WorkflowPage";
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +27,10 @@ export const router = createBrowserRouter([
   {
     path: "/about",
     element: <Layout><AboutPage /></Layout>,
+  },
+  {
+    path: "/workflow",
+    element: <Layout><WorkflowPage /></Layout>,
   },
   {
     path: "*",

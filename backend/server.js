@@ -23,3 +23,6 @@ app.use("/chat", chatRoutes)
 app.listen(5000, () => {
   console.log("Server running on http://localhost:5000")
 })
+
+const workflowRoutes = require("./routes/workflow");
+app.use("/workflow", workflowRoutes);

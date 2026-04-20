@@ -45,6 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {[
                 { path: '/', label: 'Home' },
                 { path: '/explore', label: 'Explore Tools' },
+                { path: '/workflow', label: 'Workflow' },
                 { path: '/compare', label: 'Compare' },
                 { path: '/about', label: 'About' },
               ].map(({ path, label }) => (
@@ -60,7 +61,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   {label}
-                  {/* Gold underline */}
                   <span className={`absolute -bottom-1 left-0 h-0.5 transition-all duration-300 ${
                     isActive(path) ? 'w-full' : 'w-0 group-hover:w-full'
                   }`} style={{ background: 'linear-gradient(90deg, #FFD700, #B8860B)' }} />
@@ -68,10 +68,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               ))}
             </nav>
 
-            {/* Right side — theme toggle + mobile menu */}
+            {/* Right side */}
             <div className="flex items-center gap-3">
-
-              {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 gold-border ${
@@ -86,7 +84,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 }
               </button>
 
-              {/* Mobile menu button */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className="md:hidden w-10 h-10 rounded-xl flex items-center justify-center gold-border"
@@ -107,6 +104,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {[
                 { path: '/', label: 'Home' },
                 { path: '/explore', label: 'Explore Tools' },
+                { path: '/workflow', label: 'Workflow' },
                 { path: '/compare', label: 'Compare' },
                 { path: '/about', label: 'About' },
               ].map(({ path, label }) => (
@@ -130,12 +128,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="fade-in-up">
         {children}
       </main>
 
-      {/* Footer */}
       <footer className={`border-t mt-20 transition-all duration-300 ${
         theme === 'dark'
           ? 'bg-[#0a0a0a] border-[rgba(255,215,0,0.15)]'

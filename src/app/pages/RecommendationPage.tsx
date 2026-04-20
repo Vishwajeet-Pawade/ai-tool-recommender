@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { FilterPanel } from '../components/FilterPanel';
 import { ToolCard } from '../components/ToolCard';
 import { FilterState, defaultFilters } from '../data/tools';
@@ -7,6 +7,7 @@ import type { AITool } from '../data/tools';
 import { Sparkles, SlidersHorizontal, Search, X, Bot } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { createPortal } from 'react-dom';
+// import { Link, useNavigate } from 'react-router';
 
 // ─── Session State Persistence ───────────────────────────────────────────────
 const SESSION_KEY = 'explore_state';
@@ -490,6 +491,19 @@ export function RecommendationPage() {
             )}
           </div>
         </div>
+
+        {/* View Workflow Button — shows after AI results */}
+{aiExplanation && !aiLoading && (
+  <div className="mt-3">
+    <Link
+      to={`/workflow?q=${encodeURIComponent(searchKeyword)}`}
+      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105"
+      style={{ background: 'linear-gradient(135deg, #FFD700, #B8860B)', color: '#0a0a0a' }}>
+      <Sparkles className="w-4 h-4" />
+      View Workflow →
+    </Link>
+  </div>
+)}
 
         {/* Floating Compare Button */}
         {comparisonList.length > 0 && createPortal(
